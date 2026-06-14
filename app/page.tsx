@@ -1,5 +1,9 @@
 import InstallPrompt from "./components/InstallPrompt";
-import Leaderboard from "./components/Leaderboard";
+import LeaderboardLoader from "./components/LeaderboardLoader";
+import LeaderboardSkeleton from "./components/LeaderboardSkeleton";
+import { Suspense } from "react";
+
+export const revalidate = 900;
 
 export default function Home() {
   return (
@@ -23,12 +27,58 @@ export default function Home() {
 
       <InstallPrompt />
 
-      <Leaderboard />
+      <Suspense fallback={<LeaderboardSkeleton />}>
+        <LeaderboardLoader />
+      </Suspense>
 
       <footer className="mt-auto border-t border-border/60 px-4 py-4 sm:px-6">
-        <p className="mx-auto max-w-6xl text-center text-xs text-muted">
-          Stats are illustrative. Player links go to MLB.com, Savant, FanGraphs, and
-          Baseball-Reference.
+        <p className="mx-auto max-w-6xl text-center text-xs leading-relaxed text-muted">
+          Stats refresh every 15 minutes from the{" "}
+          <a
+            href="https://statsapi.mlb.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-chrome underline-offset-2 transition-colors hover:text-sith hover:underline"
+          >
+            MLB Stats API
+          </a>
+          . Projected HRs use in-season pace; for official numbers see{" "}
+          <a
+            href="https://www.mlb.com/stats"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-chrome underline-offset-2 transition-colors hover:text-sith hover:underline"
+          >
+            MLB.com
+          </a>
+          ,{" "}
+          <a
+            href="https://baseballsavant.mlb.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-chrome underline-offset-2 transition-colors hover:text-sith hover:underline"
+          >
+            Baseball Savant
+          </a>
+          ,{" "}
+          <a
+            href="https://www.fangraphs.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-chrome underline-offset-2 transition-colors hover:text-sith hover:underline"
+          >
+            FanGraphs
+          </a>
+          , and{" "}
+          <a
+            href="https://www.baseball-reference.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-chrome underline-offset-2 transition-colors hover:text-sith hover:underline"
+          >
+            Baseball-Reference
+          </a>
+          .
         </p>
       </footer>
     </div>

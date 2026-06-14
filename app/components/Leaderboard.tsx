@@ -6,6 +6,7 @@ import {
   formatGamesBetweenHomeRuns,
   GAMES_IN_MLB_SEASON,
 } from "@/lib/hr-averages";
+import type { Player } from "@/lib/player";
 import {
   baseballReferenceUrl,
   baseballSavantUrl,
@@ -13,18 +14,6 @@ import {
   mlbPlayerStatsUrl,
 } from "@/lib/player-links";
 import { useMemo, useState, type ReactNode } from "react";
-
-type Player = {
-  name: string;
-  mlbPlayerId: number;
-  fanGraphsId?: number;
-  baseballReferencePath?: string;
-  projectedSeasonHRs: number;
-  droughtStreak: number;
-  avgHr1Year: number | null;
-  avgHr5Year: number | null;
-  avgHr10Year: number | null;
-};
 
 type PlayerWithMetrics = Player & {
   hrPerGame: number;
@@ -40,118 +29,6 @@ type SortColumn =
   | "avgHr5Year"
   | "avgHr10Year";
 type SortDirection = "asc" | "desc";
-
-const INITIAL_PLAYERS: Player[] = [
-  {
-    name: "Aaron Judge",
-    mlbPlayerId: 592450,
-    fanGraphsId: 15640,
-    baseballReferencePath: "j/judgeaa01",
-    projectedSeasonHRs: 51,
-    droughtStreak: 1,
-    avgHr1Year: 53.0,
-    avgHr5Year: 49.8,
-    avgHr10Year: 36.8,
-  },
-  {
-    name: "Munetaka Murakami",
-    mlbPlayerId: 808959,
-    baseballReferencePath: "m/murakmu01",
-    projectedSeasonHRs: 50,
-    droughtStreak: 16,
-    avgHr1Year: null,
-    avgHr5Year: null,
-    avgHr10Year: null,
-  },
-  {
-    name: "Ben Rice",
-    mlbPlayerId: 700250,
-    fanGraphsId: 29576,
-    baseballReferencePath: "r/ricebe01",
-    projectedSeasonHRs: 45,
-    droughtStreak: 3,
-    avgHr1Year: 26.0,
-    avgHr5Year: 16.5,
-    avgHr10Year: 16.5,
-  },
-  {
-    name: "Shohei Ohtani",
-    mlbPlayerId: 660271,
-    fanGraphsId: 19755,
-    baseballReferencePath: "o/ohtansh01",
-    projectedSeasonHRs: 43,
-    droughtStreak: 1,
-    avgHr1Year: 55.0,
-    avgHr5Year: 46.6,
-    avgHr10Year: 35.0,
-  },
-  {
-    name: "James Wood",
-    mlbPlayerId: 695578,
-    fanGraphsId: 29518,
-    baseballReferencePath: "w/woodja03",
-    projectedSeasonHRs: 43,
-    droughtStreak: 2,
-    avgHr1Year: 31.0,
-    avgHr5Year: 20.0,
-    avgHr10Year: 20.0,
-  },
-  {
-    name: "Yordan Alvarez",
-    mlbPlayerId: 670541,
-    fanGraphsId: 19599,
-    baseballReferencePath: "a/alvaryo01",
-    projectedSeasonHRs: 41,
-    droughtStreak: 1,
-    avgHr1Year: 6.0,
-    avgHr5Year: 28.4,
-    avgHr10Year: 24.3,
-  },
-  {
-    name: "Kyle Schwarber",
-    mlbPlayerId: 656941,
-    fanGraphsId: 16478,
-    baseballReferencePath: "s/schwaky01",
-    projectedSeasonHRs: 39,
-    droughtStreak: 1,
-    avgHr1Year: 56.0,
-    avgHr5Year: 43.8,
-    avgHr10Year: 32.6,
-  },
-  {
-    name: "Byron Buxton",
-    mlbPlayerId: 621439,
-    fanGraphsId: 14161,
-    baseballReferencePath: "b/buxtoby01",
-    projectedSeasonHRs: 36,
-    droughtStreak: 1,
-    avgHr1Year: 35.0,
-    avgHr5Year: 23.4,
-    avgHr10Year: 16.6,
-  },
-  {
-    name: "Matt Olson",
-    mlbPlayerId: 621566,
-    fanGraphsId: 14309,
-    baseballReferencePath: "o/olsonma02",
-    projectedSeasonHRs: 34,
-    droughtStreak: 1,
-    avgHr1Year: 29.0,
-    avgHr5Year: 37.0,
-    avgHr10Year: 28.8,
-  },
-  {
-    name: "Christian Walker",
-    mlbPlayerId: 572233,
-    fanGraphsId: 13419,
-    baseballReferencePath: "w/walkech02",
-    projectedSeasonHRs: 31,
-    droughtStreak: 4,
-    avgHr1Year: 27.0,
-    avgHr5Year: 26.4,
-    avgHr10Year: 17.3,
-  },
-];
 
 const GAMES_IN_SEASON = GAMES_IN_MLB_SEASON;
 
@@ -213,31 +90,102 @@ function SortIndicator({
   );
 }
 
+type DroughtTier =
+  | "ignited"
+  | "charged"
+  | "cold-orange"
+  | "cold-yellow"
+  | "cold-teal"
+  | "neutral";
+
+function getDroughtTier(streak: number): DroughtTier {
+  if (streak === 0) {
+    return "ignited";
+  }
+  if (streak === 1) {
+    return "charged";
+  }
+  if (streak <= 3) {
+    return "cold-orange";
+  }
+  if (streak <= 7) {
+    return "cold-yellow";
+  }
+  return "cold-teal";
+}
+
 function getRowHighlightClass(droughtStreak: number) {
-  if (droughtStreak === 0) {
-    return "border-sith/50 bg-sith/10 sith-box-glow-strong";
+  switch (getDroughtTier(droughtStreak)) {
+    case "ignited":
+      return "border-sith/50 bg-sith/10 sith-box-glow-strong";
+    case "charged":
+      return "border-sith/30 bg-sith/5 sith-box-glow";
+    case "cold-orange":
+      return "border-cold-orange/30 bg-cold-orange/5 cold-orange-box-glow";
+    case "cold-yellow":
+      return "border-cold-yellow/30 bg-cold-yellow/5 cold-yellow-box-glow";
+    case "cold-teal":
+      return "border-cold-teal/50 bg-cold-teal/10 cold-teal-box-glow-strong";
+    default:
+      return "border-border bg-surface";
   }
-  if (droughtStreak === 1) {
-    return "border-sith/30 bg-sith/5 sith-box-glow";
+}
+
+function getDroughtReversedClass(droughtStreak: number) {
+  switch (getDroughtTier(droughtStreak)) {
+    case "ignited":
+      return "player-panel-drought-reversed-hot";
+    case "charged":
+      return "player-panel-drought-reversed-warm";
+    case "cold-orange":
+      return "player-panel-drought-reversed-cold-orange";
+    case "cold-yellow":
+      return "player-panel-drought-reversed-cold-yellow";
+    case "cold-teal":
+      return "player-panel-drought-reversed-cold-teal";
+    default:
+      return "";
   }
-  return "border-border bg-surface";
+}
+
+function getDroughtBadgeLabel(streak: number) {
+  switch (getDroughtTier(streak)) {
+    case "ignited":
+      return "Ignited · ";
+    case "charged":
+      return "Charged · ";
+    case "cold-orange":
+      return "Cooling · ";
+    case "cold-yellow":
+      return "Cold · ";
+    case "cold-teal":
+      return "Frozen · ";
+    default:
+      return "";
+  }
 }
 
 function DroughtBadge({ streak }: { streak: number }) {
-  const isHot = streak <= 1;
+  const tier = getDroughtTier(streak);
 
   const toneClass =
-    streak === 0
+    tier === "ignited"
       ? "border-sith/60 bg-sith/20 text-sith sith-text-glow"
-      : streak === 1
+      : tier === "charged"
       ? "border-sith/40 bg-sith/10 text-red-300"
+      : tier === "cold-orange"
+      ? "border-cold-orange/40 bg-cold-orange/10 text-orange-300 cold-orange-text-glow"
+      : tier === "cold-yellow"
+      ? "border-cold-yellow/40 bg-cold-yellow/10 text-yellow-200 cold-yellow-text-glow"
+      : tier === "cold-teal"
+      ? "border-cold-teal/60 bg-cold-teal/20 text-cold-teal cold-teal-text-glow"
       : "border-border bg-surface-elevated text-chrome";
 
   return (
     <span
       className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium uppercase tracking-wide tabular-nums ${toneClass}`}
     >
-      {isHot ? (streak === 0 ? "Ignited · " : "Charged · ") : ""}
+      {getDroughtBadgeLabel(streak)}
       {streak} game{streak === 1 ? "" : "s"}
     </span>
   );
@@ -365,12 +313,7 @@ function PlayerCard({ player }: { player: PlayerWithMetrics }) {
     GAMES_IN_SEASON
   );
 
-  const droughtReversedClass =
-    player.droughtStreak === 0
-      ? "player-panel-drought-reversed-hot"
-      : player.droughtStreak === 1
-      ? "player-panel-drought-reversed-warm"
-      : "";
+  const droughtReversedClass = getDroughtReversedClass(player.droughtStreak);
 
   return (
     <article
@@ -430,8 +373,15 @@ function PlayerCard({ player }: { player: PlayerWithMetrics }) {
   );
 }
 
-export default function Leaderboard() {
-  const [players] = useState<Player[]>(INITIAL_PLAYERS);
+export default function Leaderboard({
+  players,
+  season,
+  fetchedAt,
+}: {
+  players: Player[];
+  season: number;
+  fetchedAt: string;
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortColumn, setSortColumn] = useState<SortColumn>("droughtStreak");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -504,7 +454,15 @@ export default function Leaderboard() {
           Home Run Leaderboard
         </h1>
         <p className="mt-1 text-sm text-muted sm:text-base">
-          Projected power, drought streaks, and historical HR averages.
+          Projected power, drought streaks, and historical HR averages — live from
+          MLB Stats API.
+        </p>
+        <p className="mt-1 text-xs text-muted">
+          {season} season · updated{" "}
+          {new Intl.DateTimeFormat(undefined, {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(new Date(fetchedAt))}
         </p>
       </section>
 
@@ -563,7 +521,7 @@ export default function Leaderboard() {
         <>
           <ul className="space-y-1 lg:hidden" aria-label="Player leaderboard">
             {displayedPlayers.map((player) => (
-              <li key={player.name}>
+              <li key={player.mlbPlayerId}>
                 <PlayerCard player={player} />
               </li>
             ))}
@@ -611,7 +569,7 @@ export default function Leaderboard() {
               <tbody>
                 {displayedPlayers.map((player) => (
                   <tr
-                    key={player.name}
+                    key={player.mlbPlayerId}
                     className={`border-b border-border/60 last:border-b-0 ${getRowHighlightClass(
                       player.droughtStreak
                     )}`}
@@ -660,9 +618,14 @@ export default function Leaderboard() {
           <span className="font-bold uppercase tracking-wide text-sith">
             Ignited / Charged:
           </span>{" "}
-          crimson glow marks sluggers with 0–1 games since their last HR.
-          Historical averages use completed MLB seasons through 2025;
-          games-between values assume a {GAMES_IN_SEASON}-game season.
+          crimson glow marks sluggers with 0–1 games since their last HR.{" "}
+          <span className="font-bold uppercase tracking-wide text-cold-teal">
+            Cooling / Cold / Frozen:
+          </span>{" "}
+          orange, yellow, and teal glows mark droughts of 2–3, 4–7, and 8+
+          games. Historical averages use completed MLB seasons before {season};
+          projected HRs use current-season pace over a {GAMES_IN_SEASON}-game
+          season.
         </p>
       </aside>
     </main>

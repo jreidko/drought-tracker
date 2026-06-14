@@ -12,6 +12,13 @@ export default function ServiceWorkerRegistration() {
           }
         });
       }
+      if ("caches" in window) {
+        void caches.keys().then((keys) => {
+          for (const key of keys) {
+            void caches.delete(key);
+          }
+        });
+      }
       return;
     }
 

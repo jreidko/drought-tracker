@@ -1,6 +1,6 @@
-const CACHE_VERSION = "drought-tracker-v1";
+const CACHE_VERSION = "drought-tracker-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PRECACHE_URLS = ["/", "/offline", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
+const PRECACHE_URLS = ["/offline", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -35,7 +35,12 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/")) {
+  // Next.js bundles change frequently in dev and are content-hashed in prod — never cache-first.
+  if (url.pathname.startsWith("/_next/")) {
+    return;
+  }
+
+  if (url.pathname.startsWith("/icons/")) {
     event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }

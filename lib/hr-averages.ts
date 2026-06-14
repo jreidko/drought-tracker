@@ -56,3 +56,33 @@ export function formatGamesBetweenHomeRuns(
 
   return `${value.toFixed(1)} g between`;
 }
+
+/** Count consecutive games without a HR, walking back from the most recent game. */
+export function droughtStreakFromGameHomeRuns(
+  gameHomeRunsChronological: number[],
+): number {
+  let streak = 0;
+
+  for (let index = gameHomeRunsChronological.length - 1; index >= 0; index--) {
+    if (gameHomeRunsChronological[index] > 0) {
+      break;
+    }
+
+    streak++;
+  }
+
+  return streak;
+}
+
+/** Project full-season HR total from current pace. */
+export function projectedSeasonHomeRuns(
+  homeRuns: number,
+  gamesPlayed: number,
+  gamesInSeason: number = GAMES_IN_MLB_SEASON,
+): number {
+  if (gamesPlayed <= 0) {
+    return 0;
+  }
+
+  return Math.round((homeRuns / gamesPlayed) * gamesInSeason);
+}
