@@ -1,26 +1,196 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #030303;
+  --foreground: #e4e4e7;
+  --surface: #0f0f0f;
+  --surface-elevated: #171717;
+  --border: #27272a;
+  --muted: #71717a;
+  --chrome: #a1a1aa;
+  --sith: #ef4444;
+  --sith-dim: #991b1b;
+  --sith-glow: rgba(239, 68, 68, 0.35);
+  --sith-soft: rgba(239, 68, 68, 0.12);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-chrome: var(--chrome);
+  --color-sith: var(--sith);
+  --color-sith-dim: var(--sith-dim);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.vader-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(ellipse 120% 60% at 50% -20%, rgba(127, 29, 29, 0.45), transparent 55%),
+    radial-gradient(ellipse 80% 40% at 50% 100%, rgba(24, 24, 27, 0.9), transparent 50%),
+    linear-gradient(180deg, #0a0a0a 0%, #030303 100%);
+}
+
+.sith-text-glow {
+  text-shadow: 0 0 24px var(--sith-glow);
+}
+
+.sith-box-glow {
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.25),
+    0 0 20px rgba(239, 68, 68, 0.12);
+}
+
+.sith-box-glow-strong {
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.45),
+    0 0 28px rgba(239, 68, 68, 0.22),
+    inset 0 1px 0 rgba(239, 68, 68, 0.08);
+}
+
+.imperial-rule {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--sith-dim) 15%,
+    var(--sith) 50%,
+    var(--sith-dim) 85%,
+    transparent
+  );
+  box-shadow: 0 0 12px var(--sith-glow);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--sith);
+  outline-offset: 2px;
+}
+
+.player-panel {
+  font-variant-numeric: tabular-nums;
+}
+
+.player-panel-kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted) 80%, transparent);
+}
+
+.player-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.player-panel-grid-cell {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 10px;
+}
+
+.player-panel-grid-cell:nth-child(3n) {
+  border-right: none;
+}
+
+.player-panel-grid-cell:nth-last-child(-n + 3) {
+  border-bottom: none;
+}
+
+.player-panel-grid-value {
+  display: block;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--chrome);
+}
+
+.player-panel-grid-cell-prominent .player-panel-grid-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.player-panel-grid-sub {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: color-mix(in srgb, var(--muted) 70%, transparent);
+}
+
+.player-panel-grid-cell-prominent .player-panel-grid-sub {
+  font-size: 11px;
+}
+
+.player-panel-grid-value-accent {
+  color: var(--sith);
+}
+
+.player-panel-grid-cell-drought {
+  display: flex;
+  flex-direction: column;
+}
+
+.player-panel-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+}
+
+.player-panel-name:hover {
+  color: var(--sith);
+}
+
+.player-panel-drought-reversed {
+  display: flex;
+  min-height: 3rem;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0a;
+  color: #fafafa;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.player-panel-drought-reversed-hot {
+  background: var(--sith);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, white 12%, transparent);
+}
+
+.player-panel-drought-reversed-warm {
+  background: var(--sith-dim);
 }
