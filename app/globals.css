@@ -167,7 +167,16 @@ button:focus-visible {
   border-right: none;
 }
 
-.player-panel-grid-cell:nth-last-child(-n + 3) {
+/* Last row — handles 1, 2, or 3 cells in the final row of a 3-col grid */
+.player-panel-grid-cell:last-child {
+  border-bottom: none;
+  border-right: none;
+}
+.player-panel-grid-cell:nth-last-child(2):nth-child(3n + 1),
+.player-panel-grid-cell:nth-last-child(2):nth-child(3n + 2) {
+  border-bottom: none;
+}
+.player-panel-grid-cell:nth-last-child(3):nth-child(3n + 1) {
   border-bottom: none;
 }
 
@@ -180,12 +189,6 @@ button:focus-visible {
   color: var(--chrome);
 }
 
-.player-panel-grid-cell-prominent .player-panel-grid-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--foreground);
-}
-
 .player-panel-grid-sub {
   display: block;
   margin-top: 2px;
@@ -196,18 +199,6 @@ button:focus-visible {
   color: color-mix(in srgb, var(--muted) 70%, transparent);
 }
 
-.player-panel-grid-cell-prominent .player-panel-grid-sub {
-  font-size: 11px;
-}
-
-.player-panel-grid-value-accent {
-  color: var(--sith);
-}
-
-.player-panel-grid-cell-drought {
-  display: flex;
-  flex-direction: column;
-}
 
 .player-panel-name {
   display: block;

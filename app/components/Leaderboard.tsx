@@ -10,85 +10,15 @@ import type { Player } from "@/lib/player";
 import {
   baseballReferenceUrl,
   baseballSavantUrl,
+  espnPlayerUrl,
   fanGraphsPlayerUrl,
   mlbPlayerStatsUrl,
 } from "@/lib/player-links";
-import { useMemo, useState, type ReactNode } from "react";
-
-type PlayerWithMetrics = Player & {
-  hrPerGame: number;
-  hrPerGameFormatted: string;
-};
-
-type SortColumn =
-  | "name"
-  | "projectedSeasonHRs"
-  | "hrPerGame"
-  | "droughtStreak"
-  | "avgHr1Year"
-  | "avgHr5Year"
-  | "avgHr10Year";
-type SortDirection = "asc" | "desc";
+import Image from "next/image";
+import { useMemo, useState } from "react";
 
 const GAMES_IN_SEASON = GAMES_IN_MLB_SEASON;
 
-const SORT_OPTIONS: { key: SortColumn; label: string; shortLabel: string }[] = [
-  { key: "droughtStreak", label: "Drought Streak", shortLabel: "Drought" },
-  { key: "projectedSeasonHRs", label: "Projected HRs", shortLabel: "Proj HR" },
-  { key: "avgHr1Year", label: "1-Yr Avg HR", shortLabel: "1Y Avg" },
-  { key: "avgHr5Year", label: "5-Yr Avg HR", shortLabel: "5Y Avg" },
-  { key: "avgHr10Year", label: "10-Yr Avg HR", shortLabel: "10Y Avg" },
-  { key: "hrPerGame", label: "HR per Game", shortLabel: "HR/G" },
-  { key: "name", label: "Name", shortLabel: "Name" },
-];
-
-const TABLE_COLUMNS: {
-  key: SortColumn;
-  label: string;
-  align?: "right";
-}[] = [
-  { key: "name", label: "Name" },
-  { key: "avgHr10Year", label: "10Y Avg", align: "right" },
-  { key: "avgHr5Year", label: "5Y Avg", align: "right" },
-  { key: "avgHr1Year", label: "1Y Avg", align: "right" },
-  { key: "projectedSeasonHRs", label: "Projected HRs", align: "right" },
-  { key: "droughtStreak", label: "Drought", align: "right" },
-];
-
-function compareNullableNumbers(a: number | null, b: number | null) {
-  if (a === null && b === null) {
-    return 0;
-  }
-  if (a === null) {
-    return 1;
-  }
-  if (b === null) {
-    return -1;
-  }
-  return a - b;
-}
-
-function SortIndicator({
-  active,
-  direction,
-}: {
-  active: boolean;
-  direction: SortDirection;
-}) {
-  if (!active) {
-    return (
-      <span className="ml-0.5 inline-block w-3 text-muted" aria-hidden>
-        ↕
-      </span>
-    );
-  }
-
-  return (
-    <span className="ml-0.5 inline-block w-3 text-sith" aria-hidden>
-      {direction === "asc" ? "↑" : "↓"}
-    </span>
-  );
-}
 
 type DroughtTier =
   | "ignited"
@@ -148,68 +78,30 @@ function getDroughtReversedClass(droughtStreak: number) {
   }
 }
 
-function getDroughtBadgeLabel(streak: number) {
+function getDroughtTierLabel(streak: number): string {
   switch (getDroughtTier(streak)) {
     case "ignited":
-      return "Ignited · ";
+      return "Ignited";
     case "charged":
-      return "Charged · ";
+      return "Charged";
     case "cold-orange":
-      return "Cooling · ";
+      return "Cooling";
     case "cold-yellow":
-      return "Cold · ";
+      return "Cold";
     case "cold-teal":
-      return "Frozen · ";
+      return "Frozen";
     default:
-      return "";
+      return "Drought";
   }
 }
 
-function DroughtBadge({ streak }: { streak: number }) {
-  const tier = getDroughtTier(streak);
 
-  const toneClass =
-    tier === "ignited"
-      ? "border-sith/60 bg-sith/20 text-sith sith-text-glow"
-      : tier === "charged"
-      ? "border-sith/40 bg-sith/10 text-red-300"
-      : tier === "cold-orange"
-      ? "border-cold-orange/40 bg-cold-orange/10 text-orange-300 cold-orange-text-glow"
-      : tier === "cold-yellow"
-      ? "border-cold-yellow/40 bg-cold-yellow/10 text-yellow-200 cold-yellow-text-glow"
-      : tier === "cold-teal"
-      ? "border-cold-teal/60 bg-cold-teal/20 text-cold-teal cold-teal-text-glow"
-      : "border-border bg-surface-elevated text-chrome";
+function PlayerLinks({ player }: { player: Player }) {
+  const linkClass =
+    "font-mono text-[10px] uppercase tracking-wide text-chrome transition-colors hover:text-sith hover:underline";
 
   return (
-    <span
-      className={`inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-medium uppercase tracking-wide tabular-nums ${toneClass}`}
-    >
-      {getDroughtBadgeLabel(streak)}
-      {streak} game{streak === 1 ? "" : "s"}
-    </span>
-  );
-}
-
-function PlayerLinks({
-  player,
-  compact = false,
-}: {
-  player: Player;
-  compact?: boolean;
-}) {
-  const linkClass = compact
-    ? "font-mono text-[10px] uppercase tracking-wide text-chrome transition-colors hover:text-sith hover:underline"
-    : "inline-flex min-h-11 items-center rounded-sm px-2 text-chrome transition-colors hover:text-sith hover:underline";
-
-  return (
-    <div
-      className={`flex flex-wrap items-center ${
-        compact
-          ? "gap-x-2 gap-y-0 font-mono text-[10px] uppercase tracking-wide"
-          : "gap-2 text-xs text-muted"
-      }`}
-    >
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-0 font-mono text-[10px] uppercase tracking-wide">
       <a
         href={baseballSavantUrl(player.name, player.mlbPlayerId)}
         target="_blank"
@@ -238,6 +130,16 @@ function PlayerLinks({
           B-Ref
         </a>
       ) : null}
+      {player.espnId !== undefined ? (
+        <a
+          href={espnPlayerUrl(player.espnId, player.name)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkClass}
+        >
+          ESPN
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -246,83 +148,100 @@ function PlayerPanelGridCell({
   label,
   value,
   sub,
-  prominent = false,
-  accent = false,
-  drought = false,
-  droughtClass = "",
-  children,
 }: {
   label: string;
   value?: string;
   sub?: string;
-  prominent?: boolean;
-  accent?: boolean;
-  drought?: boolean;
-  droughtClass?: string;
-  children?: ReactNode;
 }) {
   return (
-    <div
-      className={`player-panel-grid-cell ${prominent ? "player-panel-grid-cell-prominent" : ""} ${drought ? "player-panel-grid-cell-drought" : ""}`}
-    >
+    <div className="player-panel-grid-cell">
       <span className="player-panel-kicker">{label}</span>
-      {children}
-      {!children && !drought && value !== undefined ? (
+      {value !== undefined ? (
         <>
-          <span
-            className={`player-panel-grid-value ${accent ? "player-panel-grid-value-accent" : ""}`}
-          >
-            {value}
-          </span>
+          <span className="player-panel-grid-value">{value}</span>
           {sub ? <span className="player-panel-grid-sub">{sub}</span> : null}
         </>
-      ) : null}
-      {!children && drought && value !== undefined ? (
-        <div className={`player-panel-drought-reversed ${droughtClass}`}>
-          {value}
-        </div>
       ) : null}
     </div>
   );
 }
 
-function AvgHrTableCell({ avgHr }: { avgHr: number | null }) {
-  const gamesBetween = averageGamesBetweenHomeRuns(avgHr, GAMES_IN_SEASON);
+
+function StatusDot({ on, onClass }: { on: boolean; onClass: string }) {
+  return (
+    <span
+      className={`inline-block size-1.5 rounded-full ${on ? onClass : "bg-muted/30"}`}
+    />
+  );
+}
+
+function PlayerStatusBadges({ player }: { player: Player }) {
+  const injured = player.rosterStatus === "inactive";
 
   return (
-    <div className="flex flex-col items-end gap-0.5">
-      <span className="tabular-nums">{formatAverageHomeRuns(avgHr)}</span>
-      <span className="text-[11px] tabular-nums text-muted">
-        {formatGamesBetweenHomeRuns(gamesBetween)}
+    <div className="mt-1.5 flex items-center gap-2.5">
+      <span className="inline-flex items-center gap-1">
+        <StatusDot on={!injured} onClass="bg-cold-teal" />
+        <span
+          className={`font-mono text-[9px] uppercase tracking-wide ${
+            !injured ? "text-cold-teal" : "text-muted/50"
+          }`}
+        >
+          Active
+        </span>
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <StatusDot on={player.gameToday} onClass="bg-sith" />
+        <span
+          className={`font-mono text-[9px] uppercase tracking-wide ${
+            player.gameToday ? "text-chrome" : "text-muted/50"
+          }`}
+        >
+          Game
+        </span>
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <StatusDot on={injured} onClass="bg-cold-yellow" />
+        <span
+          className={`font-mono text-[9px] uppercase tracking-wide ${
+            injured ? "text-cold-yellow" : "text-muted/50"
+          }`}
+        >
+          IL
+        </span>
       </span>
     </div>
   );
 }
 
-function PlayerCard({ player }: { player: PlayerWithMetrics }) {
-  const games1Y = averageGamesBetweenHomeRuns(
-    player.avgHr1Year,
-    GAMES_IN_SEASON
-  );
-  const games5Y = averageGamesBetweenHomeRuns(
-    player.avgHr5Year,
-    GAMES_IN_SEASON
-  );
-  const games10Y = averageGamesBetweenHomeRuns(
-    player.avgHr10Year,
-    GAMES_IN_SEASON
-  );
-
+function PlayerCard({ player }: { player: Player }) {
+  const games1Y = averageGamesBetweenHomeRuns(player.avgHr1Year, GAMES_IN_SEASON);
+  const games3Y = averageGamesBetweenHomeRuns(player.avgHr3Year, GAMES_IN_SEASON);
+  const games5Y = averageGamesBetweenHomeRuns(player.avgHr5Year, GAMES_IN_SEASON);
   const droughtReversedClass = getDroughtReversedClass(player.droughtStreak);
 
   return (
     <article
-      className={`player-panel overflow-hidden rounded-none border ${getRowHighlightClass(
-        player.droughtStreak
-      )}`}
+      className={`player-panel overflow-hidden rounded-sm border ${getRowHighlightClass(player.droughtStreak)}`}
     >
-      <div className="player-panel-grid">
-        <PlayerPanelGridCell label="Name" prominent>
+      {player.teamId !== null ? (
+        <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
+          <Image
+            src={`https://www.mlbstatic.com/team-logos/${player.teamId}.svg`}
+            alt=""
+            aria-hidden={true}
+            width={20}
+            height={20}
+            className="shrink-0 opacity-90"
+          />
+          <span className="font-mono text-[10px] uppercase tracking-wide text-muted">
+            {player.teamName}
+          </span>
+        </div>
+      ) : null}
+      <div className="flex border-b border-border">
+        <div className="flex flex-1 flex-col border-r border-border px-2.5 py-2">
+          <span className="player-panel-kicker">Name</span>
           <a
             href={mlbPlayerStatsUrl(player.name, player.mlbPlayerId)}
             target="_blank"
@@ -331,43 +250,39 @@ function PlayerCard({ player }: { player: PlayerWithMetrics }) {
           >
             {player.name}
           </a>
-        </PlayerPanelGridCell>
+          <span className="mt-1 block font-mono text-xs font-bold tabular-nums text-sith">
+            {player.homeRunsThisSeason} / {player.projectedSeasonHRs} HR
+          </span>
+          <PlayerStatusBadges player={player} />
+        </div>
+        <div className="flex w-1/3 flex-col px-2.5 py-2">
+          <span className="player-panel-kicker">{getDroughtTierLabel(player.droughtStreak)}</span>
+          <div className={`player-panel-drought-reversed flex-1 ${droughtReversedClass}`}>
+            {player.droughtStreak}
+          </div>
+        </div>
+      </div>
 
+      <div className="player-panel-grid">
         <PlayerPanelGridCell
           label="1Y Avg"
           value={formatAverageHomeRuns(player.avgHr1Year)}
           sub={formatGamesBetweenHomeRuns(games1Y, true)}
-          prominent
         />
-
         <PlayerPanelGridCell
-          label="Drought"
-          value={String(player.droughtStreak)}
-          drought
-          droughtClass={droughtReversedClass}
+          label="3Y Avg"
+          value={formatAverageHomeRuns(player.avgHr3Year)}
+          sub={formatGamesBetweenHomeRuns(games3Y, true)}
         />
-
         <PlayerPanelGridCell
           label="5Y Avg"
           value={formatAverageHomeRuns(player.avgHr5Year)}
           sub={formatGamesBetweenHomeRuns(games5Y, true)}
         />
-
-        <PlayerPanelGridCell
-          label="10Y Avg"
-          value={formatAverageHomeRuns(player.avgHr10Year)}
-          sub={formatGamesBetweenHomeRuns(games10Y, true)}
-        />
-
-        <PlayerPanelGridCell
-          label="Proj HR"
-          value={String(player.projectedSeasonHRs)}
-          accent
-        />
       </div>
 
       <footer className="border-t border-border bg-surface/60 px-2 py-1.5">
-        <PlayerLinks player={player} compact />
+        <PlayerLinks player={player} />
       </footer>
     </article>
   );
@@ -383,69 +298,25 @@ export default function Leaderboard({
   fetchedAt: string;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortColumn, setSortColumn] = useState<SortColumn>("droughtStreak");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [filterProjHR30, setFilterProjHR30] = useState(false);
+  const [filterProjHR, setFilterProjHR] = useState(false);
+  const [filterGameToday, setFilterGameToday] = useState(false);
+  const [filterDrought, setFilterDrought] = useState(false);
 
   const displayedPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
-    const withMetrics: PlayerWithMetrics[] = players.map((player) => {
-      const hrPerGame = player.projectedSeasonHRs / GAMES_IN_SEASON;
-      return {
-        ...player,
-        hrPerGame,
-        hrPerGameFormatted: hrPerGame.toFixed(3),
-      };
-    });
-
-    const filtered = normalizedQuery
-      ? withMetrics.filter((player) =>
-          player.name.toLowerCase().includes(normalizedQuery)
-        )
-      : withMetrics;
-
-    const sorted = [...filtered].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortColumn) {
-        case "name":
-          comparison = a.name.localeCompare(b.name);
-          break;
-        case "projectedSeasonHRs":
-          comparison = a.projectedSeasonHRs - b.projectedSeasonHRs;
-          break;
-        case "hrPerGame":
-          comparison = a.hrPerGame - b.hrPerGame;
-          break;
-        case "droughtStreak":
-          comparison = a.droughtStreak - b.droughtStreak;
-          break;
-        case "avgHr1Year":
-          comparison = compareNullableNumbers(a.avgHr1Year, b.avgHr1Year);
-          break;
-        case "avgHr5Year":
-          comparison = compareNullableNumbers(a.avgHr5Year, b.avgHr5Year);
-          break;
-        case "avgHr10Year":
-          comparison = compareNullableNumbers(a.avgHr10Year, b.avgHr10Year);
-          break;
-      }
-
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-
-    return sorted;
-  }, [players, searchQuery, sortColumn, sortDirection]);
-
-  function handleSort(column: SortColumn) {
-    if (sortColumn === column) {
-      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-      return;
-    }
-
-    setSortColumn(column);
-    setSortDirection(column === "name" ? "asc" : "desc");
-  }
+    return players
+      .filter((player) => {
+        if (normalizedQuery && !player.name.toLowerCase().includes(normalizedQuery)) return false;
+        if (filterProjHR30 && player.projectedSeasonHRs <= 30) return false;
+        if (filterProjHR && player.projectedSeasonHRs <= 40) return false;
+        if (filterGameToday && !player.gameToday) return false;
+        if (filterDrought && player.droughtStreak < 3) return false;
+        return true;
+      })
+      .sort((a, b) => b.droughtStreak - a.droughtStreak);
+  }, [players, searchQuery, filterProjHR30, filterProjHR, filterGameToday, filterDrought]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -466,10 +337,7 @@ export default function Leaderboard({
         </p>
       </section>
 
-      <section
-        aria-label="Search and sort controls"
-        className="mb-4 space-y-3 sm:mb-6"
-      >
+      <section aria-label="Search and filter controls" className="mb-4 space-y-2 sm:mb-6">
         <label className="block">
           <span className="sr-only">Search players by name</span>
           <input
@@ -480,35 +348,50 @@ export default function Leaderboard({
             className="w-full rounded-sm border border-border bg-surface-elevated px-4 py-3 text-base text-foreground placeholder:text-muted transition-colors focus:border-sith/60"
           />
         </label>
-
-        <div className="flex gap-2 lg:hidden">
-          <label className="min-w-0 flex-1">
-            <span className="sr-only">Sort by</span>
-            <select
-              value={sortColumn}
-              onChange={(event) => handleSort(event.target.value as SortColumn)}
-              className="w-full rounded-sm border border-border bg-surface-elevated px-3 py-3 text-sm text-foreground transition-colors focus:border-sith/60"
-            >
-              {SORT_OPTIONS.map((option) => (
-                <option key={option.key} value={option.key}>
-                  Sort: {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() =>
-              setSortDirection((current) =>
-                current === "asc" ? "desc" : "asc"
-              )
-            }
-            className="shrink-0 rounded-sm border border-sith-dim/50 bg-surface-elevated px-4 py-3 text-sm font-bold uppercase tracking-wide text-sith transition-colors active:bg-sith/10"
-            aria-label={`Sort ${
-              sortDirection === "asc" ? "ascending" : "descending"
-            }. Tap to reverse.`}
+            onClick={() => setFilterProjHR30((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterProjHR30
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
           >
-            {sortDirection === "asc" ? "↑ Asc" : "↓ Desc"}
+            30+ Proj HR
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterProjHR((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterProjHR
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
+          >
+            40+ Proj HR
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterGameToday((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterGameToday
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
+          >
+            Game Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterDrought((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterDrought
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
+          >
+            3+ Game Drought
           </button>
         </div>
       </section>
@@ -518,99 +401,16 @@ export default function Leaderboard({
           No players match your search.
         </p>
       ) : (
-        <>
-          <ul className="space-y-1 lg:hidden" aria-label="Player leaderboard">
-            {displayedPlayers.map((player) => (
-              <li key={player.mlbPlayerId}>
-                <PlayerCard player={player} />
-              </li>
-            ))}
-          </ul>
-
-          <div
-            className="hidden overflow-x-auto rounded-sm border border-border lg:block"
-            aria-label="Player leaderboard table"
-          >
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-elevated">
-                  {TABLE_COLUMNS.map((column) => (
-                    <th
-                      key={column.key}
-                      scope="col"
-                      aria-sort={
-                        sortColumn === column.key
-                          ? sortDirection === "asc"
-                            ? "ascending"
-                            : "descending"
-                          : "none"
-                      }
-                      className={`px-3 py-3 text-xs font-bold uppercase tracking-[0.1em] text-chrome xl:px-4 ${
-                        column.align === "right" ? "text-right" : "text-left"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleSort(column.key)}
-                        className={`inline-flex items-center gap-0.5 transition-colors hover:text-sith ${
-                          column.align === "right" ? "ml-auto" : ""
-                        } ${sortColumn === column.key ? "text-sith" : ""}`}
-                      >
-                        {column.label}
-                        <SortIndicator
-                          active={sortColumn === column.key}
-                          direction={sortDirection}
-                        />
-                      </button>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {displayedPlayers.map((player) => (
-                  <tr
-                    key={player.mlbPlayerId}
-                    className={`border-b border-border/60 last:border-b-0 ${getRowHighlightClass(
-                      player.droughtStreak
-                    )}`}
-                  >
-                    <td className="px-3 py-3 xl:px-4">
-                      <div className="flex flex-col gap-1">
-                        <a
-                          href={mlbPlayerStatsUrl(
-                            player.name,
-                            player.mlbPlayerId
-                          )}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-foreground underline-offset-2 transition-colors hover:text-sith hover:underline"
-                        >
-                          {player.name}
-                        </a>
-                        <PlayerLinks player={player} />
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-right xl:px-4">
-                      <AvgHrTableCell avgHr={player.avgHr10Year} />
-                    </td>
-                    <td className="px-3 py-3 text-right xl:px-4">
-                      <AvgHrTableCell avgHr={player.avgHr5Year} />
-                    </td>
-                    <td className="px-3 py-3 text-right xl:px-4">
-                      <AvgHrTableCell avgHr={player.avgHr1Year} />
-                    </td>
-                    <td className="px-3 py-3 text-right font-bold tabular-nums text-sith xl:px-4">
-                      {player.projectedSeasonHRs}
-                    </td>
-                    <td className="px-3 py-3 text-right xl:px-4">
-                      <DroughtBadge streak={player.droughtStreak} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
+        <ul
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          aria-label="Player leaderboard"
+        >
+          {displayedPlayers.map((player) => (
+            <li key={player.mlbPlayerId}>
+              <PlayerCard player={player} />
+            </li>
+          ))}
+        </ul>
       )}
 
       <aside className="mt-4 rounded-sm border border-border bg-surface/80 px-4 py-3 text-xs leading-relaxed text-muted sm:mt-6 sm:text-sm">

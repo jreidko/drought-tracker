@@ -1,6 +1,7 @@
 type PlayerMetadata = {
   fanGraphsId?: number;
   baseballReferencePath?: string;
+  espnId?: number;
 };
 
 /** Optional third-party IDs for outbound links — keyed by MLB player ID. */

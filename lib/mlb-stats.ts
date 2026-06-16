@@ -39,8 +39,54 @@ type MlbLeadersResponse = {
   }>;
 };
 
+type MlbPersonResponse = {
+  people: Array<{
+    active: boolean;
+    currentTeam?: { id: number; name: string };
+    batSide?: { code: string };
+  }>;
+};
+
+type MlbScheduleResponse = {
+  dates: Array<{
+    games: Array<{
+      teams: {
+        home: { team: { id: number } };
+        away: { team: { id: number } };
+      };
+    }>;
+  }>;
+};
+
 export function getCurrentMlbSeason(referenceDate = new Date()): number {
   return referenceDate.getFullYear();
+}
+
+function formatDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseBatSide(code: string | undefined): "L" | "R" | "S" {
+  if (code === "L" || code === "R" || code === "S") return code;
+  return "R";
+}
+
+async function fetchTodayScheduleTeamIds(): Promise<Set<number>> {
+  const today = formatDate(new Date());
+  const response = await fetchMlb<MlbScheduleResponse>(
+    `/schedule?sportId=1&date=${today}`,
+  );
+  const teamIds = new Set<number>();
+  for (const date of response.dates) {
+    for (const game of date.games) {
+      teamIds.add(game.teams.home.team.id);
+      teamIds.add(game.teams.away.team.id);
+    }
+  }
+  return teamIds;
 }
 
 async function fetchMlb<T>(path: string): Promise<T> {
@@ -80,24 +126,29 @@ async function buildPlayerStats(
   mlbPlayerId: number,
   name: string,
   season: number,
+  todayTeamIds: Set<number>,
 ): Promise<Player> {
-  const [yearByYearResponse, gameLogResponse] = await Promise.all([
+  const [yearByYearResponse, gameLogResponse, personResponse] = await Promise.all([
     fetchMlb<MlbStatsResponse>(
       `/people/${mlbPlayerId}/stats?stats=yearByYear&group=hitting`,
     ),
     fetchMlb<MlbStatsResponse>(
       `/people/${mlbPlayerId}/stats?stats=gameLog&group=hitting&season=${season}`,
     ),
+    fetchMlb<MlbPersonResponse>(`/people/${mlbPlayerId}?hydrate=currentTeam`),
   ]);
 
   const seasons = parseYearByYearStats(yearByYearResponse);
   const currentSeason = seasons.find(({ season: year }) => year === season);
   const gameHomeRuns = parseGameLogHomeRuns(gameLogResponse);
+  const person = personResponse.people[0];
+  const teamId = person?.currentTeam?.id;
 
   return {
     name,
     mlbPlayerId,
     ...getPlayerMetadata(mlbPlayerId),
+    homeRunsThisSeason: currentSeason?.homeRuns ?? 0,
     projectedSeasonHRs: currentSeason
       ? projectedSeasonHomeRuns(
           currentSeason.homeRuns,
@@ -106,8 +157,13 @@ async function buildPlayerStats(
       : 0,
     droughtStreak: droughtStreakFromGameHomeRuns(gameHomeRuns),
     avgHr1Year: averageHomeRunsPerSeason(seasons, 1, season),
+    avgHr3Year: averageHomeRunsPerSeason(seasons, 3, season),
     avgHr5Year: averageHomeRunsPerSeason(seasons, 5, season),
-    avgHr10Year: averageHomeRunsPerSeason(seasons, 10, season),
+    rosterStatus: person?.active ? "active" : "inactive",
+    gameToday: teamId !== undefined ? todayTeamIds.has(teamId) : false,
+    batSide: parseBatSide(person?.batSide?.code),
+    teamId: teamId ?? null,
+    teamName: person?.currentTeam?.name ?? null,
   };
 }
 
@@ -118,9 +174,12 @@ export async function getLeaderboardPlayers(options?: {
   const season = options?.season ?? getCurrentMlbSeason();
   const limit = options?.limit ?? 50;
 
-  const leadersResponse = await fetchMlb<MlbLeadersResponse>(
-    `/stats/leaders?leaderCategories=homeRuns&season=${season}&statGroup=hitting&limit=${limit}`,
-  );
+  const [leadersResponse, todayTeamIds] = await Promise.all([
+    fetchMlb<MlbLeadersResponse>(
+      `/stats/leaders?leaderCategories=homeRuns&season=${season}&statGroup=hitting&limit=${limit}`,
+    ),
+    fetchTodayScheduleTeamIds(),
+  ]);
 
   const leaders = leadersResponse.leagueLeaders?.[0]?.leaders ?? [];
 
@@ -130,7 +189,7 @@ export async function getLeaderboardPlayers(options?: {
 
   const players = await Promise.all(
     leaders.map((leader) =>
-      buildPlayerStats(leader.person.id, leader.person.fullName, season),
+      buildPlayerStats(leader.person.id, leader.person.fullName, season, todayTeamIds),
     ),
   );
 

@@ -22,3 +22,7 @@ export function fanGraphsPlayerUrl(fanGraphsId: number, name: string): string {
 export function baseballReferenceUrl(baseballReferencePath: string): string {
   return `https://www.baseball-reference.com/players/${baseballReferencePath}.shtml`;
 }
+
+export function espnPlayerUrl(espnId: number, name: string): string {
+  return `https://www.espn.com/mlb/player/_/id/${espnId}/${slugifyPlayerName(name)}`;
+}
