@@ -47,13 +47,13 @@ function getDroughtTier(streak: number): DroughtTier {
 function getRowHighlightClass(droughtStreak: number) {
   switch (getDroughtTier(droughtStreak)) {
     case "ignited":
-      return "border-sith/50 bg-sith/10 sith-box-glow-strong";
+      return "border-sith-dim/50 bg-sith-dim/10 sith-box-glow";
     case "charged":
-      return "border-sith/30 bg-sith/5 sith-box-glow";
+      return "border-cold-orange/50 bg-cold-orange/10 cold-orange-box-glow";
     case "cold-orange":
-      return "border-cold-orange/30 bg-cold-orange/5 cold-orange-box-glow";
-    case "cold-yellow":
       return "border-cold-yellow/30 bg-cold-yellow/5 cold-yellow-box-glow";
+    case "cold-yellow":
+      return "border-cold-green/30 bg-cold-green/5 cold-green-box-glow";
     case "cold-teal":
       return "border-cold-teal/50 bg-cold-teal/10 cold-teal-box-glow-strong";
     default:
@@ -64,13 +64,13 @@ function getRowHighlightClass(droughtStreak: number) {
 function getDroughtReversedClass(droughtStreak: number) {
   switch (getDroughtTier(droughtStreak)) {
     case "ignited":
-      return "player-panel-drought-reversed-hot";
-    case "charged":
       return "player-panel-drought-reversed-warm";
-    case "cold-orange":
+    case "charged":
       return "player-panel-drought-reversed-cold-orange";
-    case "cold-yellow":
+    case "cold-orange":
       return "player-panel-drought-reversed-cold-yellow";
+    case "cold-yellow":
+      return "player-panel-drought-reversed-cold-green";
     case "cold-teal":
       return "player-panel-drought-reversed-cold-teal";
     default:
@@ -413,20 +413,24 @@ export default function Leaderboard({
         </ul>
       )}
 
-      <aside className="mt-4 rounded-sm border border-border bg-surface/80 px-4 py-3 text-xs leading-relaxed text-muted sm:mt-6 sm:text-sm">
-        <p>
-          <span className="font-bold uppercase tracking-wide text-sith">
-            Ignited / Charged:
-          </span>{" "}
-          crimson glow marks sluggers with 0–1 games since their last HR.{" "}
-          <span className="font-bold uppercase tracking-wide text-cold-teal">
-            Cooling / Cold / Frozen:
-          </span>{" "}
-          orange, yellow, and teal glows mark droughts of 2–3, 4–7, and 8+
-          games. Historical averages use completed MLB seasons before {season};
-          projected HRs use current-season pace over a {GAMES_IN_SEASON}-game
-          season.
-        </p>
+      <aside className="mt-4 rounded-sm border border-border bg-surface/80 px-4 py-3 sm:mt-6">
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          {[
+            { label: "Ignited", range: "0 games", dotClass: "bg-sith-dim" },
+            { label: "Charged", range: "1 game", dotClass: "bg-cold-orange" },
+            { label: "Cooling", range: "2–3 games", dotClass: "bg-cold-yellow" },
+            { label: "Cold", range: "4–7 games", dotClass: "bg-cold-green" },
+            { label: "Frozen", range: "8+ games", dotClass: "bg-cold-teal" },
+          ].map(({ label, range, dotClass }) => (
+            <div key={label} className="flex items-center gap-2">
+              <span className={`size-2.5 shrink-0 rounded-full ${dotClass}`} />
+              <span className="font-mono text-[11px] uppercase tracking-wide text-chrome">
+                {label}
+              </span>
+              <span className="font-mono text-[11px] text-muted">{range}</span>
+            </div>
+          ))}
+        </div>
       </aside>
     </main>
   );
