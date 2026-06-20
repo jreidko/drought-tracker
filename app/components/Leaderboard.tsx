@@ -6,14 +6,17 @@ import {
   formatGamesBetweenHomeRuns,
   GAMES_IN_MLB_SEASON,
 } from "@/lib/hr-averages";
-import type { Player } from "@/lib/player";
 import {
   baseballReferenceUrl,
   baseballSavantUrl,
   espnPlayerUrl,
   fanGraphsPlayerUrl,
   mlbPlayerStatsUrl,
+  mlbTeamLogoUrl,
 } from "@/lib/player-links";
+import type { Player, TodayGameInfo } from "@/lib/player";
+import { describeHrParkFactor } from "@/lib/venue-hr-stats";
+import LeaderboardReference from "@/app/components/LeaderboardReference";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -214,6 +217,86 @@ function PlayerStatusBadges({ player }: { player: Player }) {
   );
 }
 
+function TodayGamePanel({ todayGame }: { todayGame: TodayGameInfo }) {
+  const parkFactorLabel = describeHrParkFactor(todayGame.hrParkFactor);
+
+  return (
+    <div className="border-t border-border bg-surface/40 px-2.5 py-2">
+      <div className="flex items-start gap-2">
+        <Image
+          src={mlbTeamLogoUrl(todayGame.homeTeamId)}
+          alt=""
+          aria-hidden={true}
+          width={24}
+          height={24}
+          className="mt-0.5 shrink-0 opacity-90"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-chrome">
+              {todayGame.venueName}
+            </span>
+            <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-muted">
+              {todayGame.isHome ? "Home" : "Away"}
+            </span>
+          </div>
+          <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+            <div>
+              <span className="player-panel-kicker">HR Factor</span>
+              <span className="block font-mono text-xs font-bold tabular-nums text-chrome">
+                {todayGame.hrParkFactor}
+              </span>
+              <span className="block font-mono text-[9px] text-muted">
+                {parkFactorLabel}
+                {todayGame.hrParkFactorYearRange
+                  ? ` · ${todayGame.hrParkFactorYearRange}`
+                  : null}
+              </span>
+            </div>
+            <div>
+              <span className="player-panel-kicker">At Park</span>
+              <span className="block font-mono text-xs font-bold tabular-nums text-sith">
+                {todayGame.playerHomeRunsAtVenue} HR
+              </span>
+              <span className="block font-mono text-[9px] text-muted">
+                {todayGame.playerGamesAtVenue} G this season
+              </span>
+            </div>
+          </div>
+          <div className="mt-1.5">
+            <span className="player-panel-kicker">Vs Pitcher</span>
+            {todayGame.opposingPitcher ? (
+              <>
+                <a
+                  href={mlbPlayerStatsUrl(
+                    todayGame.opposingPitcher.name,
+                    todayGame.opposingPitcher.mlbPlayerId,
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate font-mono text-xs font-bold text-chrome underline-offset-2 hover:text-sith hover:underline"
+                >
+                  {todayGame.opposingPitcher.name}
+                </a>
+                <span className="mt-0.5 block font-mono text-[10px] tabular-nums text-muted">
+                  {todayGame.opposingPitcher.record} · {todayGame.opposingPitcher.era} ERA ·{" "}
+                  {todayGame.opposingPitcher.whip} WHIP
+                </span>
+                <span className="block font-mono text-[10px] tabular-nums text-muted">
+                  {todayGame.opposingPitcher.homeRuns} HR · {todayGame.opposingPitcher.strikeOuts}{" "}
+                  K · {todayGame.opposingPitcher.inningsPitched} IP
+                </span>
+              </>
+            ) : (
+              <span className="block font-mono text-xs font-bold text-muted">TBD</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerCard({ player }: { player: Player }) {
   const games1Y = averageGamesBetweenHomeRuns(player.avgHr1Year, GAMES_IN_SEASON);
   const games3Y = averageGamesBetweenHomeRuns(player.avgHr3Year, GAMES_IN_SEASON);
@@ -227,7 +310,7 @@ function PlayerCard({ player }: { player: Player }) {
       {player.teamId !== null ? (
         <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
           <Image
-            src={`https://www.mlbstatic.com/team-logos/${player.teamId}.svg`}
+            src={mlbTeamLogoUrl(player.teamId)}
             alt=""
             aria-hidden={true}
             width={20}
@@ -280,6 +363,8 @@ function PlayerCard({ player }: { player: Player }) {
           sub={formatGamesBetweenHomeRuns(games5Y, true)}
         />
       </div>
+
+      {player.todayGame ? <TodayGamePanel todayGame={player.todayGame} /> : null}
 
       <footer className="border-t border-border bg-surface/60 px-2 py-1.5">
         <PlayerLinks player={player} />
@@ -432,6 +517,8 @@ export default function Leaderboard({
           ))}
         </div>
       </aside>
+
+      <LeaderboardReference />
     </main>
   );
 }

@@ -26,3 +26,7 @@ export function baseballReferenceUrl(baseballReferencePath: string): string {
 export function espnPlayerUrl(espnId: number, name: string): string {
   return `https://www.espn.com/mlb/player/_/id/${espnId}/${slugifyPlayerName(name)}`;
 }
+
+export function mlbTeamLogoUrl(teamId: number): string {
+  return `https://www.mlbstatic.com/team-logos/${teamId}.svg`;
+}
