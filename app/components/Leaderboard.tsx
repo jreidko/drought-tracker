@@ -386,6 +386,8 @@ export default function Leaderboard({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterProjHR30, setFilterProjHR30] = useState(false);
   const [filterProjHR, setFilterProjHR] = useState(false);
+  const [filterAvg3Y20, setFilterAvg3Y20] = useState(false);
+  const [filterAvg3Y30, setFilterAvg3Y30] = useState(false);
   const [filterGameToday, setFilterGameToday] = useState(false);
   const [filterDrought, setFilterDrought] = useState(false);
 
@@ -397,12 +399,14 @@ export default function Leaderboard({
         if (normalizedQuery && !player.name.toLowerCase().includes(normalizedQuery)) return false;
         if (filterProjHR30 && player.projectedSeasonHRs <= 30) return false;
         if (filterProjHR && player.projectedSeasonHRs <= 40) return false;
+        if (filterAvg3Y20 && (player.avgHr3Year === null || player.avgHr3Year <= 20)) return false;
+        if (filterAvg3Y30 && (player.avgHr3Year === null || player.avgHr3Year <= 30)) return false;
         if (filterGameToday && !player.gameToday) return false;
         if (filterDrought && player.droughtStreak < 3) return false;
         return true;
       })
       .sort((a, b) => b.droughtStreak - a.droughtStreak);
-  }, [players, searchQuery, filterProjHR30, filterProjHR, filterGameToday, filterDrought]);
+  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -456,6 +460,28 @@ export default function Leaderboard({
             }`}
           >
             40+ Proj HR
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterAvg3Y20((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterAvg3Y20
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
+          >
+            3Y Avg {'>'} 20
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterAvg3Y30((v) => !v)}
+            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterAvg3Y30
+                ? "border-sith bg-sith/15 text-sith"
+                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+            }`}
+          >
+            3Y Avg {'>'} 30
           </button>
           <button
             type="button"

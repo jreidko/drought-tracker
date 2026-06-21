@@ -172,33 +172,43 @@ function AbbreviationGroup({ items }: { items: AbbreviationItem[] }) {
 
 export default function LeaderboardReference() {
   return (
-    <section
-      aria-label="Field reference"
-      className="mt-4 rounded-sm border border-border bg-surface/80 px-4 py-4 sm:mt-6"
-    >
-      <h2 className="text-sm font-bold uppercase tracking-[0.08em] text-chrome">
-        What the numbers mean
-      </h2>
-      <p className="mt-1 text-xs text-muted">
-        Top 200 home run leaders for the current season. Data refreshes every 15 minutes.
-      </p>
+    <section aria-label="Field reference" className="mt-4 sm:mt-6">
+      <details className="group rounded-sm border border-border bg-surface/80">
+        <summary className="cursor-pointer list-none px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-chrome transition-colors hover:text-sith marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            What the numbers mean
+            <span
+              aria-hidden
+              className="text-[10px] text-muted transition-transform group-open:rotate-180"
+            >
+              ▼
+            </span>
+          </span>
+        </summary>
 
-      <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <ReferenceGroup title="Hitter stats" items={hitterStats} />
-        <ReferenceGroup title="Status badges" items={statusBadges} />
-        <ReferenceGroup title="Today's game" items={todayGameStats} />
-        <ReferenceGroup title="Drought tiers" items={droughtTiers} />
-      </div>
+        <div className="border-t border-border px-4 py-4">
+          <p className="text-xs text-muted">
+            Top 200 home run leaders for the current season. Data refreshes every 15 minutes.
+          </p>
 
-      <div className="mt-6 border-t border-border pt-4">
-        <AbbreviationGroup items={abbreviations} />
-      </div>
+          <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <ReferenceGroup title="Hitter stats" items={hitterStats} />
+            <ReferenceGroup title="Status badges" items={statusBadges} />
+            <ReferenceGroup title="Today's game" items={todayGameStats} />
+            <ReferenceGroup title="Drought tiers" items={droughtTiers} />
+          </div>
 
-      <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted/70">
-        External links (Savant, FanGraphs, B-Ref, ESPN) open third-party player pages.
-        FanGraphs and B-Ref IDs are curated where available; ESPN IDs are matched via
-        search. Team logos from MLB Static.
-      </p>
+          <div className="mt-6 border-t border-border pt-4">
+            <AbbreviationGroup items={abbreviations} />
+          </div>
+
+          <p className="mt-4 border-t border-border pt-3 font-mono text-[10px] leading-relaxed text-muted/70">
+            External links (Savant, FanGraphs, B-Ref, ESPN) open third-party player pages.
+            FanGraphs and B-Ref IDs are curated where available; ESPN IDs are matched via
+            search. Team logos from MLB Static.
+          </p>
+        </div>
+      </details>
     </section>
   );
 }
