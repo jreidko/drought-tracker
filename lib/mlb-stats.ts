@@ -251,7 +251,7 @@ export async function getLeaderboardPlayers(options?: {
   limit?: number;
 }): Promise<LeaderboardData> {
   const season = options?.season ?? getCurrentMlbSeason();
-  const limit = options?.limit ?? 150;
+  const limit = options?.limit ?? 200;
 
   const [leadersResponse, todayGamesByTeam, venueHrStatsByVenueId] =
     await Promise.all([

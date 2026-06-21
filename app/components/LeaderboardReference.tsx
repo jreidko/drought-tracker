@@ -180,7 +180,7 @@ export default function LeaderboardReference() {
         What the numbers mean
       </h2>
       <p className="mt-1 text-xs text-muted">
-        Top 150 home run leaders for the current season. Data refreshes every 15 minutes.
+        Top 200 home run leaders for the current season. Data refreshes every 15 minutes.
       </p>
 
       <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
