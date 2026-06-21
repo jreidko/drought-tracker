@@ -38,16 +38,21 @@ type MlbStatsResponse = {
   stats: MlbStatsBlock[];
 };
 
-type MlbLeader = {
-  person: {
+type MlbSeasonStatSplit = {
+  season?: string;
+  stat: {
+    homeRuns?: number;
+    gamesPlayed?: number;
+  };
+  player: {
     id: number;
     fullName: string;
   };
 };
 
-type MlbLeadersResponse = {
-  leagueLeaders?: Array<{
-    leaders: MlbLeader[];
+type MlbSeasonStatsResponse = {
+  stats: Array<{
+    splits: MlbSeasonStatSplit[];
   }>;
 };
 
@@ -253,19 +258,19 @@ export async function getLeaderboardPlayers(options?: {
   const season = options?.season ?? getCurrentMlbSeason();
   const limit = options?.limit ?? 200;
 
-  const [leadersResponse, todayGamesByTeam, venueHrStatsByVenueId] =
+  const [seasonStatsResponse, todayGamesByTeam, venueHrStatsByVenueId] =
     await Promise.all([
-      fetchMlb<MlbLeadersResponse>(
-        `/stats/leaders?leaderCategories=homeRuns&season=${season}&statGroup=hitting&limit=${limit}`,
+      fetchMlb<MlbSeasonStatsResponse>(
+        `/stats?stats=season&group=hitting&season=${season}&playerPool=ALL&limit=${limit}&order=desc&sortStat=homeRuns`,
       ),
       fetchTodayScheduleByTeam(),
       fetchVenueHrStatsByVenueId(season).catch(() => new Map<number, VenueHrStats>()),
     ]);
 
-  const leaders = leadersResponse.leagueLeaders?.[0]?.leaders ?? [];
+  const seasonLeaders = seasonStatsResponse.stats?.[0]?.splits ?? [];
 
-  if (leaders.length === 0) {
-    throw new Error(`No home run leaders returned for ${season}`);
+  if (seasonLeaders.length === 0) {
+    throw new Error(`No season hitting stats returned for ${season}`);
   }
 
   const probablePitcherIds = [
@@ -282,10 +287,10 @@ export async function getLeaderboardPlayers(options?: {
   );
 
   const players = await Promise.all(
-    leaders.map((leader) =>
+    seasonLeaders.map((leader) =>
       buildPlayerStats(
-        leader.person.id,
-        leader.person.fullName,
+        leader.player.id,
+        leader.player.fullName,
         season,
         todayGamesByTeam,
         venueHrStatsByVenueId,

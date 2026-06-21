@@ -17,6 +17,7 @@ import {
 import type { Player, TodayGameInfo } from "@/lib/player";
 import { describeHrParkFactor } from "@/lib/venue-hr-stats";
 import LeaderboardReference from "@/app/components/LeaderboardReference";
+import HomeRunLeadersTable from "@/app/components/HomeRunLeadersTable";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -519,6 +520,8 @@ export default function Leaderboard({
       </aside>
 
       <LeaderboardReference />
+
+      <HomeRunLeadersTable players={players} />
     </main>
   );
 }
