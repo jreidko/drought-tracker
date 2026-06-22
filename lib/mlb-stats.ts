@@ -4,7 +4,7 @@ import {
   droughtStreakFromGameHomeRuns,
   projectedSeasonHomeRuns,
 } from "@/lib/hr-averages";
-import { getPlayerMetadata } from "@/lib/player-metadata";
+import { getPlayerMetadata, PRIORITY_PLAYERS } from "@/lib/player-metadata";
 import type { LeaderboardData, OpposingPitcher, Player, TodayGameInfo } from "@/lib/player";
 import {
   fetchPitcherSeasonStatsMap,
@@ -18,6 +18,7 @@ import {
 
 const MLB_STATS_API = "https://statsapi.mlb.com/api/v1";
 const CACHE_SECONDS = 900;
+
 
 type MlbStatSplit = {
   season?: string;
@@ -274,6 +275,13 @@ export async function getLeaderboardPlayers(options?: {
 
   if (seasonLeaders.length === 0) {
     throw new Error(`No season hitting stats returned for ${season}`);
+  }
+
+  const leaderIds = new Set(seasonLeaders.map((s) => s.player.id));
+  for (const p of PRIORITY_PLAYERS) {
+    if (!leaderIds.has(p.id)) {
+      seasonLeaders.push({ player: { id: p.id, fullName: p.fullName }, stat: {} });
+    }
   }
 
   const probablePitcherIds = [

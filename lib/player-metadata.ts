@@ -211,3 +211,8 @@ const PLAYER_METADATA: Record<number, PlayerMetadata> = {
 export function getPlayerMetadata(mlbPlayerId: number): PlayerMetadata {
   return PLAYER_METADATA[mlbPlayerId] ?? {};
 }
+
+// Players always included regardless of whether they rank in the top-N HR leaders.
+export const PRIORITY_PLAYERS: Array<{ id: number; fullName: string }> = [
+  { id: 660271, fullName: "Shohei Ohtani" },
+];
