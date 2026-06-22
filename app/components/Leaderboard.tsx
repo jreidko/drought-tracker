@@ -19,7 +19,7 @@ import { describeHrParkFactor } from "@/lib/venue-hr-stats";
 import LeaderboardReference from "@/app/components/LeaderboardReference";
 import HomeRunLeadersTable from "@/app/components/HomeRunLeadersTable";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 const GAMES_IN_SEASON = GAMES_IN_MLB_SEASON;
 
@@ -298,7 +298,44 @@ function TodayGamePanel({ todayGame }: { todayGame: TodayGameInfo }) {
   );
 }
 
-function PlayerCard({ player }: { player: Player }) {
+function useStarredPlayers() {
+  const [starredIds, setStarredIds] = useState<Set<number>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem("starredPlayers");
+      return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  const toggleStar = useCallback((id: number) => {
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      try {
+        localStorage.setItem("starredPlayers", JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  return { starredIds, toggleStar };
+}
+
+function PlayerCard({
+  player,
+  isStarred,
+  onToggleStar,
+}: {
+  player: Player;
+  isStarred: boolean;
+  onToggleStar: () => void;
+}) {
   const games1Y = averageGamesBetweenHomeRuns(player.avgHr1Year, GAMES_IN_SEASON);
   const games3Y = averageGamesBetweenHomeRuns(player.avgHr3Year, GAMES_IN_SEASON);
   const games5Y = averageGamesBetweenHomeRuns(player.avgHr5Year, GAMES_IN_SEASON);
@@ -308,21 +345,40 @@ function PlayerCard({ player }: { player: Player }) {
     <article
       className={`player-panel overflow-hidden rounded-sm border ${getRowHighlightClass(player.droughtStreak)}`}
     >
-      {player.teamId !== null ? (
-        <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
-          <Image
-            src={mlbTeamLogoUrl(player.teamId)}
-            alt=""
-            aria-hidden={true}
-            width={20}
-            height={20}
-            className="shrink-0 opacity-90"
-          />
-          <span className="font-mono text-[10px] uppercase tracking-wide text-muted">
-            {player.teamName}
-          </span>
-        </div>
-      ) : null}
+      <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
+        {player.teamId !== null ? (
+          <>
+            <Image
+              src={mlbTeamLogoUrl(player.teamId)}
+              alt=""
+              aria-hidden={true}
+              width={20}
+              height={20}
+              className="shrink-0 opacity-90"
+            />
+            <span className="font-mono text-[10px] uppercase tracking-wide text-muted">
+              {player.teamName}
+            </span>
+          </>
+        ) : null}
+        <button
+          onClick={onToggleStar}
+          aria-label={isStarred ? "Unstar player" : "Star player"}
+          className="ml-auto shrink-0 transition-colors"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill={isStarred ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            className={isStarred ? "text-yellow-400" : "text-muted hover:text-chrome"}
+          >
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </button>
+      </div>
       <div className="flex border-b border-border">
         <div className="flex flex-1 flex-col border-r border-border px-2.5 py-2">
           <span className="player-panel-kicker">Name</span>
@@ -390,6 +446,8 @@ export default function Leaderboard({
   const [filterAvg3Y30, setFilterAvg3Y30] = useState(false);
   const [filterGameToday, setFilterGameToday] = useState(false);
   const [filterDrought, setFilterDrought] = useState(false);
+  const [filterStarred, setFilterStarred] = useState(false);
+  const { starredIds, toggleStar } = useStarredPlayers();
 
   const displayedPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -403,10 +461,16 @@ export default function Leaderboard({
         if (filterAvg3Y30 && (player.avgHr3Year === null || player.avgHr3Year <= 30)) return false;
         if (filterGameToday && !player.gameToday) return false;
         if (filterDrought && player.droughtStreak < 3) return false;
+        if (filterStarred && !starredIds.has(player.mlbPlayerId)) return false;
         return true;
       })
-      .sort((a, b) => b.droughtStreak - a.droughtStreak);
-  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought]);
+      .sort((a, b) => {
+        const aStarred = starredIds.has(a.mlbPlayerId) ? 1 : 0;
+        const bStarred = starredIds.has(b.mlbPlayerId) ? 1 : 0;
+        if (bStarred !== aStarred) return bStarred - aStarred;
+        return b.droughtStreak - a.droughtStreak;
+      });
+  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, starredIds]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -505,6 +569,27 @@ export default function Leaderboard({
           >
             3+ Game Drought
           </button>
+          <button
+            type="button"
+            onClick={() => setFilterStarred((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+              filterStarred
+                ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400"
+                : "border-border bg-surface-elevated text-muted hover:border-yellow-400/40 hover:text-chrome"
+            }`}
+          >
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 24 24"
+              fill={filterStarred ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Starred
+          </button>
         </div>
       </section>
 
@@ -519,7 +604,11 @@ export default function Leaderboard({
         >
           {displayedPlayers.map((player) => (
             <li key={player.mlbPlayerId}>
-              <PlayerCard player={player} />
+              <PlayerCard
+                  player={player}
+                  isStarred={starredIds.has(player.mlbPlayerId)}
+                  onToggleStar={() => toggleStar(player.mlbPlayerId)}
+                />
             </li>
           ))}
         </ul>
