@@ -4,6 +4,7 @@ import LeaderboardSkeleton from "./components/LeaderboardSkeleton";
 import { Suspense } from "react";
 
 export const revalidate = 900;
+export const maxDuration = 300;
 
 export default function Home() {
   return (

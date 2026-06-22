@@ -193,14 +193,17 @@ async function buildPlayerStats(
   venueHrStatsByVenueId: Map<number, VenueHrStats>,
   pitcherStatsById: Map<number, PitcherSeasonStats>,
 ): Promise<Player> {
+  const emptyStats: MlbStatsResponse = { stats: [] };
+  const emptyPerson: MlbPersonResponse = { people: [] };
+
   const [yearByYearResponse, gameLogResponse, personResponse] = await Promise.all([
     fetchMlb<MlbStatsResponse>(
       `/people/${mlbPlayerId}/stats?stats=yearByYear&group=hitting`,
-    ),
+    ).catch(() => emptyStats),
     fetchMlb<MlbStatsResponse>(
       `/people/${mlbPlayerId}/stats?stats=gameLog&group=hitting&season=${season}`,
-    ),
-    fetchMlb<MlbPersonResponse>(`/people/${mlbPlayerId}?hydrate=currentTeam`),
+    ).catch(() => emptyStats),
+    fetchMlb<MlbPersonResponse>(`/people/${mlbPlayerId}?hydrate=currentTeam`).catch(() => emptyPerson),
   ]);
 
   const seasons = parseYearByYearStats(yearByYearResponse);
@@ -286,7 +289,7 @@ export async function getLeaderboardPlayers(options?: {
     season,
   );
 
-  const players = await Promise.all(
+  const results = await Promise.allSettled(
     seasonLeaders.map((leader) =>
       buildPlayerStats(
         leader.player.id,
@@ -298,6 +301,14 @@ export async function getLeaderboardPlayers(options?: {
       ),
     ),
   );
+
+  const players = results
+    .filter((r): r is PromiseFulfilledResult<Player> => r.status === "fulfilled")
+    .map((r) => r.value);
+
+  if (players.length === 0) {
+    throw new Error(`No player data could be loaded for ${season}`);
+  }
 
   return {
     players,
