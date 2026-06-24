@@ -4,15 +4,19 @@ import { mlbPlayerStatsUrl } from "@/lib/player-links";
 import type { Player } from "@/lib/player";
 import { useMemo } from "react";
 
-export default function HomeRunLeadersTable({ players }: { players: Player[] }) {
+export default function HomeRunLeadersTable({
+  players,
+}: {
+  players: Player[];
+}) {
   const sortedPlayers = useMemo(
     () =>
       [...players].sort(
         (a, b) =>
           b.homeRunsThisSeason - a.homeRunsThisSeason ||
-          a.name.localeCompare(b.name),
+          a.name.localeCompare(b.name)
       ),
-    [players],
+    [players]
   );
 
   return (
@@ -20,7 +24,7 @@ export default function HomeRunLeadersTable({ players }: { players: Player[] }) 
       <details className="group rounded-sm border border-border bg-surface/80">
         <summary className="cursor-pointer list-none px-4 py-3 font-mono text-[11px] font-bold uppercase tracking-[0.12em] text-chrome transition-colors hover:text-sith marker:content-none [&::-webkit-details-marker]:hidden">
           <span className="flex items-center justify-between gap-2">
-            Home Run Leaders ({sortedPlayers.length})
+            Players Shown ({sortedPlayers.length})
             <span
               aria-hidden
               className="text-[10px] text-muted transition-transform group-open:rotate-180"

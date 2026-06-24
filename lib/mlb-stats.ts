@@ -4,7 +4,7 @@ import {
   droughtStreakFromGameHomeRuns,
   projectedSeasonHomeRuns,
 } from "@/lib/hr-averages";
-import { getPlayerMetadata, PRIORITY_PLAYERS } from "@/lib/player-metadata";
+import { getPlayerMetadata, PLAYER_METADATA } from "@/lib/player-metadata";
 import type { LeaderboardData, OpposingPitcher, Player, TodayGameInfo } from "@/lib/player";
 import {
   fetchPitcherSeasonStatsMap,
@@ -28,6 +28,7 @@ type MlbStatSplit = {
   stat: {
     homeRuns?: number;
     gamesPlayed?: number;
+    slg?: number;
   };
 };
 
@@ -39,27 +40,10 @@ type MlbStatsResponse = {
   stats: MlbStatsBlock[];
 };
 
-type MlbSeasonStatSplit = {
-  season?: string;
-  stat: {
-    homeRuns?: number;
-    gamesPlayed?: number;
-  };
-  player: {
-    id: number;
-    fullName: string;
-  };
-};
-
-type MlbSeasonStatsResponse = {
-  stats: Array<{
-    splits: MlbSeasonStatSplit[];
-  }>;
-};
-
 type MlbPersonResponse = {
   people: Array<{
     active: boolean;
+    fullName?: string;
     birthDate?: string;
     currentTeam?: { id: number; name: string };
     batSide?: { code: string };
@@ -101,6 +85,7 @@ function parseYearByYearStats(response: MlbStatsResponse) {
       season: Number(split.season),
       homeRuns: split.stat.homeRuns ?? 0,
       gamesPlayed: split.stat.gamesPlayed ?? 0,
+      slg: split.stat.slg != null ? Number(split.stat.slg) : null,
     }))
     .filter(({ season }) => Number.isFinite(season));
 }
@@ -188,7 +173,7 @@ function buildTodayGameInfo(
 
 async function buildPlayerStats(
   mlbPlayerId: number,
-  name: string,
+  name: string | undefined,
   season: number,
   todayGamesByTeam: Map<number, TodayGame>,
   venueHrStatsByVenueId: Map<number, VenueHrStats>,
@@ -212,21 +197,24 @@ async function buildPlayerStats(
   const gameLog = parseGameLog(gameLogResponse);
   const gameHomeRuns = gameLog.map((entry) => entry.homeRuns);
   const person = personResponse.people[0];
+  const playerName = person?.fullName ?? name ?? "Unknown";
   const teamId = person?.currentTeam?.id;
   const metadata = getPlayerMetadata(mlbPlayerId);
   const espnId =
     metadata.espnId ??
-    (await lookupEspnId(name, person?.birthDate));
+    (await lookupEspnId(playerName, person?.birthDate));
   const todayGame =
     teamId !== undefined ? todayGamesByTeam.get(teamId) : undefined;
   const gameToday = todayGame !== undefined;
 
   return {
-    name,
+    name: playerName,
     mlbPlayerId,
     ...metadata,
     espnId,
+    sluggingPct: currentSeason?.slg ?? null,
     homeRunsThisSeason: currentSeason?.homeRuns ?? 0,
+    gamesPlayed: currentSeason?.gamesPlayed ?? 0,
     projectedSeasonHRs: currentSeason
       ? projectedSeasonHomeRuns(
           currentSeason.homeRuns,
@@ -257,32 +245,14 @@ async function buildPlayerStats(
 
 export async function getLeaderboardPlayers(options?: {
   season?: number;
-  limit?: number;
 }): Promise<LeaderboardData> {
   const season = options?.season ?? getCurrentMlbSeason();
-  const limit = options?.limit ?? 200;
+  const playerIds = Object.keys(PLAYER_METADATA).map(Number);
 
-  const [seasonStatsResponse, todayGamesByTeam, venueHrStatsByVenueId] =
-    await Promise.all([
-      fetchMlb<MlbSeasonStatsResponse>(
-        `/stats?stats=season&group=hitting&season=${season}&playerPool=ALL&limit=${limit}&order=desc&sortStat=homeRuns`,
-      ),
-      fetchTodayScheduleByTeam(),
-      fetchVenueHrStatsByVenueId(season).catch(() => new Map<number, VenueHrStats>()),
-    ]);
-
-  const seasonLeaders = seasonStatsResponse.stats?.[0]?.splits ?? [];
-
-  if (seasonLeaders.length === 0) {
-    throw new Error(`No season hitting stats returned for ${season}`);
-  }
-
-  const leaderIds = new Set(seasonLeaders.map((s) => s.player.id));
-  for (const p of PRIORITY_PLAYERS) {
-    if (!leaderIds.has(p.id)) {
-      seasonLeaders.push({ player: { id: p.id, fullName: p.fullName }, stat: {} });
-    }
-  }
+  const [todayGamesByTeam, venueHrStatsByVenueId] = await Promise.all([
+    fetchTodayScheduleByTeam(),
+    fetchVenueHrStatsByVenueId(season).catch(() => new Map<number, VenueHrStats>()),
+  ]);
 
   const probablePitcherIds = [
     ...new Set(
@@ -298,10 +268,10 @@ export async function getLeaderboardPlayers(options?: {
   );
 
   const results = await Promise.allSettled(
-    seasonLeaders.map((leader) =>
+    playerIds.map((id) =>
       buildPlayerStats(
-        leader.player.id,
-        leader.player.fullName,
+        id,
+        undefined,
         season,
         todayGamesByTeam,
         venueHrStatsByVenueId,

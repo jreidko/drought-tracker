@@ -5,7 +5,7 @@ type PlayerMetadata = {
 };
 
 /** Optional third-party IDs for outbound links — keyed by MLB player ID. */
-const PLAYER_METADATA: Record<number, PlayerMetadata> = {
+export const PLAYER_METADATA: Record<number, PlayerMetadata> = {
   656941: { fanGraphsId: 16478, baseballReferencePath: "s/schwaky01" },
   670541: { fanGraphsId: 19556, baseballReferencePath: "a/alvaryo01" },
   621439: { fanGraphsId: 14161, baseballReferencePath: "b/buxtoby01" },
@@ -212,7 +212,3 @@ export function getPlayerMetadata(mlbPlayerId: number): PlayerMetadata {
   return PLAYER_METADATA[mlbPlayerId] ?? {};
 }
 
-// Players always included regardless of whether they rank in the top-N HR leaders.
-export const PRIORITY_PLAYERS: Array<{ id: number; fullName: string }> = [
-  { id: 660271, fullName: "Shohei Ohtani" },
-];

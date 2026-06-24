@@ -27,7 +27,9 @@ export type Player = {
   fanGraphsId?: number;
   baseballReferencePath?: string;
   homeRunsThisSeason: number;
+  gamesPlayed: number;
   projectedSeasonHRs: number;
+  sluggingPct: number | null;
   droughtStreak: number;
   avgHr1Year: number | null;
   avgHr3Year: number | null;

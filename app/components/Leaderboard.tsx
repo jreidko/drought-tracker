@@ -19,7 +19,7 @@ import { describeHrParkFactor } from "@/lib/venue-hr-stats";
 import LeaderboardReference from "@/app/components/LeaderboardReference";
 import HomeRunLeadersTable from "@/app/components/HomeRunLeadersTable";
 import Image from "next/image";
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 
 const GAMES_IN_SEASON = GAMES_IN_MLB_SEASON;
 
@@ -152,17 +152,26 @@ function PlayerPanelGridCell({
   label,
   value,
   sub,
+  icon,
 }: {
   label: string;
   value?: string;
   sub?: string;
+  icon?: React.ReactNode;
 }) {
   return (
     <div className="player-panel-grid-cell">
       <span className="player-panel-kicker">{label}</span>
       {value !== undefined ? (
         <>
-          <span className="player-panel-grid-value">{value}</span>
+          <span className="player-panel-grid-value">
+            {icon ? (
+              <span className="flex items-center gap-1">
+                {icon}
+                {value}
+              </span>
+            ) : value}
+          </span>
           {sub ? <span className="player-panel-grid-sub">{sub}</span> : null}
         </>
       ) : null}
@@ -381,7 +390,18 @@ function PlayerCard({
       </div>
       <div className="flex border-b border-border">
         <div className="flex flex-1 flex-col border-r border-border px-2.5 py-2">
-          <span className="player-panel-kicker">Name</span>
+          <div className="flex items-center justify-between">
+            <span className="player-panel-kicker">Name</span>
+            {player.sluggingPct !== null && (
+              <span className="flex items-center gap-1 font-mono text-[8px] font-semibold uppercase tracking-[0.12em] text-muted tabular-nums">
+                SLG {player.sluggingPct.toFixed(3).replace(/^0/, "")}
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" fill="none">
+                  <line x1="1" y1="9" x2="3.5" y2="6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  <line x1="3.5" y1="6.5" x2="9" y2="1" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              </span>
+            )}
+          </div>
           <a
             href={mlbPlayerStatsUrl(player.name, player.mlbPlayerId)}
             target="_blank"
@@ -393,6 +413,11 @@ function PlayerCard({
           <span className="mt-1 block font-mono text-xs font-bold tabular-nums text-sith">
             {player.homeRunsThisSeason} / {player.projectedSeasonHRs} HR
           </span>
+          {player.gamesPlayed > 0 && (
+            <span className="block font-mono text-[10px] tabular-nums text-muted">
+              {(player.homeRunsThisSeason / player.gamesPlayed).toFixed(3)} HR/G · {player.gamesPlayed} G
+            </span>
+          )}
           <PlayerStatusBadges player={player} />
         </div>
         <div className="flex w-1/3 flex-col px-2.5 py-2">
@@ -455,8 +480,8 @@ export default function Leaderboard({
     return players
       .filter((player) => {
         if (normalizedQuery && !player.name.toLowerCase().includes(normalizedQuery)) return false;
-        if (filterProjHR30 && player.projectedSeasonHRs <= 30) return false;
-        if (filterProjHR && player.projectedSeasonHRs <= 40) return false;
+        if (filterProjHR30 && (player.gamesPlayed === 0 || player.homeRunsThisSeason / player.gamesPlayed < 0.185)) return false;
+        if (filterProjHR && (player.gamesPlayed === 0 || player.homeRunsThisSeason / player.gamesPlayed < 0.247)) return false;
         if (filterAvg3Y20 && (player.avgHr3Year === null || player.avgHr3Year <= 20)) return false;
         if (filterAvg3Y30 && (player.avgHr3Year === null || player.avgHr3Year <= 30)) return false;
         if (filterGameToday && !player.gameToday) return false;
@@ -631,6 +656,16 @@ export default function Leaderboard({
               <span className="font-mono text-[11px] text-muted">{range}</span>
             </div>
           ))}
+        </div>
+        <div className="mt-2 border-t border-border/50 pt-2 space-y-1 font-mono text-[11px] text-muted">
+          <div>
+            <span className="uppercase tracking-wide text-chrome">HR/G</span>
+            {" — home runs per game this season (used to project full-season total at 162 G pace)"}
+          </div>
+          <div>
+            <span className="uppercase tracking-wide text-chrome">SLG</span>
+            {" — slugging percentage from current season stats"}
+          </div>
         </div>
       </aside>
 
