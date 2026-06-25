@@ -202,7 +202,7 @@ async function buildPlayerStats(
   const metadata = getPlayerMetadata(mlbPlayerId);
   const espnId =
     metadata.espnId ??
-    (await lookupEspnId(playerName, person?.birthDate));
+    (await lookupEspnId(playerName, person?.birthDate).catch(() => undefined));
   const todayGame =
     teamId !== undefined ? todayGamesByTeam.get(teamId) : undefined;
   const gameToday = todayGame !== undefined;
@@ -243,6 +243,28 @@ async function buildPlayerStats(
   };
 }
 
+async function limitConcurrency<T>(
+  fns: Array<() => Promise<T>>,
+  limit: number,
+): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = new Array(fns.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < fns.length) {
+      const i = index++;
+      try {
+        results[i] = { status: "fulfilled", value: await fns[i]() };
+      } catch (reason) {
+        results[i] = { status: "rejected", reason };
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: limit }, worker));
+  return results;
+}
+
 export async function getLeaderboardPlayers(options?: {
   season?: number;
 }): Promise<LeaderboardData> {
@@ -267,8 +289,8 @@ export async function getLeaderboardPlayers(options?: {
     season,
   );
 
-  const results = await Promise.allSettled(
-    playerIds.map((id) =>
+  const results = await limitConcurrency(
+    playerIds.map((id) => () =>
       buildPlayerStats(
         id,
         undefined,
@@ -278,6 +300,7 @@ export async function getLeaderboardPlayers(options?: {
         pitcherStatsById,
       ),
     ),
+    10,
   );
 
   const players = results
