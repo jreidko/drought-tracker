@@ -472,6 +472,7 @@ export default function Leaderboard({
   const [filterGameToday, setFilterGameToday] = useState(false);
   const [filterDrought, setFilterDrought] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
+  const [sortBy, setSortBy] = useState<"drought" | "slugging" | "projHR">("drought");
   const { starredIds, toggleStar } = useStarredPlayers();
 
   const displayedPlayers = useMemo(() => {
@@ -493,9 +494,17 @@ export default function Leaderboard({
         const aStarred = starredIds.has(a.mlbPlayerId) ? 1 : 0;
         const bStarred = starredIds.has(b.mlbPlayerId) ? 1 : 0;
         if (bStarred !== aStarred) return bStarred - aStarred;
+        if (sortBy === "slugging") {
+          const aSlg = a.sluggingPct ?? -1;
+          const bSlg = b.sluggingPct ?? -1;
+          return bSlg - aSlg;
+        }
+        if (sortBy === "projHR") {
+          return b.projectedSeasonHRs - a.projectedSeasonHRs;
+        }
         return b.droughtStreak - a.droughtStreak;
       });
-  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, starredIds]);
+  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, starredIds, sortBy]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -615,6 +624,29 @@ export default function Leaderboard({
             </svg>
             Starred
           </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[10px] uppercase tracking-wide text-muted">Sort:</span>
+          {(
+            [
+              { value: "drought", label: "Drought" },
+              { value: "slugging", label: "SLG %" },
+              { value: "projHR", label: "Proj HR" },
+            ] as const
+          ).map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setSortBy(value)}
+              className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+                sortBy === value
+                  ? "border-sith bg-sith/15 text-sith"
+                  : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </section>
 
