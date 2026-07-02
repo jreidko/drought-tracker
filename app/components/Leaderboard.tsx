@@ -472,8 +472,35 @@ export default function Leaderboard({
   const [filterGameToday, setFilterGameToday] = useState(false);
   const [filterDrought, setFilterDrought] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
+  const [selectedGameHomeTeamId, setSelectedGameHomeTeamId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"drought" | "slugging" | "projHR">("drought");
   const { starredIds, toggleStar } = useStarredPlayers();
+
+  const activeGames = useMemo(() => {
+    const gameMap = new Map<number, { homeTeamName: string | null; awayTeamName: string | null; venueName: string }>();
+    for (const player of players) {
+      if (!player.todayGame) continue;
+      const { homeTeamId, venueName } = player.todayGame;
+      if (!gameMap.has(homeTeamId)) {
+        gameMap.set(homeTeamId, { homeTeamName: null, awayTeamName: null, venueName });
+      }
+      const entry = gameMap.get(homeTeamId)!;
+      if (player.teamId === homeTeamId) {
+        entry.homeTeamName = player.teamName;
+      } else {
+        entry.awayTeamName = player.teamName;
+      }
+    }
+    return Array.from(gameMap.entries())
+      .map(([homeTeamId, info]) => ({
+        homeTeamId,
+        label:
+          info.awayTeamName && info.homeTeamName
+            ? `${info.awayTeamName} @ ${info.homeTeamName}`
+            : info.venueName,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [players]);
 
   const displayedPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -488,6 +515,7 @@ export default function Leaderboard({
         if (filterGameToday && !player.gameToday) return false;
         if (filterDrought && player.droughtStreak < 3) return false;
         if (filterStarred && !starredIds.has(player.mlbPlayerId)) return false;
+        if (selectedGameHomeTeamId !== null && player.todayGame?.homeTeamId !== selectedGameHomeTeamId) return false;
         return true;
       })
       .sort((a, b) => {
@@ -504,7 +532,7 @@ export default function Leaderboard({
         }
         return b.droughtStreak - a.droughtStreak;
       });
-  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, starredIds, sortBy]);
+  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, selectedGameHomeTeamId, starredIds, sortBy]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -625,6 +653,31 @@ export default function Leaderboard({
             Starred
           </button>
         </div>
+        {activeGames.length > 0 && (
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="game-filter"
+              className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted"
+            >
+              Game:
+            </label>
+            <select
+              id="game-filter"
+              value={selectedGameHomeTeamId ?? ""}
+              onChange={(e) =>
+                setSelectedGameHomeTeamId(e.target.value === "" ? null : Number(e.target.value))
+              }
+              className="rounded-sm border border-border bg-surface-elevated px-2 py-1.5 font-mono text-[11px] uppercase tracking-wide text-chrome transition-colors focus:border-sith/60 focus:outline-none"
+            >
+              <option value="">All Games</option>
+              {activeGames.map((game) => (
+                <option key={game.homeTeamId} value={game.homeTeamId}>
+                  {game.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono text-[10px] uppercase tracking-wide text-muted">Sort:</span>
           {(
