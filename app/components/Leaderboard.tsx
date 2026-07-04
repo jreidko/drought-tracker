@@ -340,10 +340,14 @@ function PlayerCard({
   player,
   isStarred,
   onToggleStar,
+  isCompared,
+  onToggleCompare,
 }: {
   player: Player;
   isStarred: boolean;
   onToggleStar: () => void;
+  isCompared: boolean;
+  onToggleCompare: () => void;
 }) {
   const games1Y = averageGamesBetweenHomeRuns(player.avgHr1Year, GAMES_IN_SEASON);
   const games3Y = averageGamesBetweenHomeRuns(player.avgHr3Year, GAMES_IN_SEASON);
@@ -370,23 +374,45 @@ function PlayerCard({
             </span>
           </>
         ) : null}
-        <button
-          onClick={onToggleStar}
-          aria-label={isStarred ? "Unstar player" : "Star player"}
-          className="ml-auto shrink-0 transition-colors"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill={isStarred ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="2"
-            className={isStarred ? "text-yellow-400" : "text-muted hover:text-chrome"}
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={onToggleCompare}
+            aria-label={isCompared ? "Remove from comparison" : "Add to comparison"}
+            className="shrink-0 transition-colors"
           >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-        </button>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={isCompared ? "text-cold-teal" : "text-muted hover:text-chrome"}
+            >
+              <rect x="3" y="3" width="7" height="18" rx="1" />
+              <rect x="14" y="3" width="7" height="18" rx="1" />
+            </svg>
+          </button>
+          <button
+            onClick={onToggleStar}
+            aria-label={isStarred ? "Unstar player" : "Star player"}
+            className="shrink-0 transition-colors"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill={isStarred ? "currentColor" : "none"}
+              stroke="currentColor"
+              strokeWidth="2"
+              className={isStarred ? "text-yellow-400" : "text-muted hover:text-chrome"}
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="flex border-b border-border">
         <div className="flex flex-1 flex-col border-r border-border px-2.5 py-2">
@@ -475,6 +501,21 @@ export default function Leaderboard({
   const [selectedGameHomeTeamId, setSelectedGameHomeTeamId] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"drought" | "slugging" | "projHR">("drought");
   const { starredIds, toggleStar } = useStarredPlayers();
+  const [comparedIds, setComparedIds] = useState<Set<number>>(new Set());
+
+  const toggleCompare = useCallback((id: number) => {
+    setComparedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearComparison = useCallback(() => setComparedIds(new Set()), []);
 
   const activeGames = useMemo(() => {
     const gameMap = new Map<number, { homeTeamName: string | null; awayTeamName: string | null; venueName: string }>();
@@ -703,6 +744,40 @@ export default function Leaderboard({
         </div>
       </section>
 
+      {comparedIds.size > 0 && (() => {
+        const comparedPlayers = players.filter((p) => comparedIds.has(p.mlbPlayerId));
+        return (
+          <section aria-label="Player comparison" className="mb-6">
+            <div className="mb-2 flex items-center gap-3">
+              <h2 className="font-mono text-[11px] uppercase tracking-wide text-chrome">
+                Comparing {comparedIds.size} player{comparedIds.size !== 1 ? "s" : ""}
+              </h2>
+              <button
+                type="button"
+                onClick={clearComparison}
+                className="rounded-sm border border-border bg-surface-elevated px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-muted transition-colors hover:border-sith/40 hover:text-chrome"
+              >
+                Clear
+              </button>
+            </div>
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {comparedPlayers.map((player) => (
+                <li key={player.mlbPlayerId}>
+                  <PlayerCard
+                    player={player}
+                    isStarred={starredIds.has(player.mlbPlayerId)}
+                    onToggleStar={() => toggleStar(player.mlbPlayerId)}
+                    isCompared={true}
+                    onToggleCompare={() => toggleCompare(player.mlbPlayerId)}
+                  />
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 border-t border-border/50" />
+          </section>
+        );
+      })()}
+
       {displayedPlayers.length === 0 ? (
         <p className="rounded-sm border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
           No players match your search.
@@ -715,10 +790,12 @@ export default function Leaderboard({
           {displayedPlayers.map((player) => (
             <li key={player.mlbPlayerId}>
               <PlayerCard
-                  player={player}
-                  isStarred={starredIds.has(player.mlbPlayerId)}
-                  onToggleStar={() => toggleStar(player.mlbPlayerId)}
-                />
+                player={player}
+                isStarred={starredIds.has(player.mlbPlayerId)}
+                onToggleStar={() => toggleStar(player.mlbPlayerId)}
+                isCompared={comparedIds.has(player.mlbPlayerId)}
+                onToggleCompare={() => toggleCompare(player.mlbPlayerId)}
+              />
             </li>
           ))}
         </ul>
