@@ -1,5 +1,6 @@
 export type OpposingPitcher = {
   mlbPlayerId: number;
+  teamId: number;
   name: string;
   record: string;
   era: string;

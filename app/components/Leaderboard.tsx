@@ -277,17 +277,27 @@ function TodayGamePanel({ todayGame }: { todayGame: TodayGameInfo }) {
             <span className="player-panel-kicker">Vs Pitcher</span>
             {todayGame.opposingPitcher ? (
               <>
-                <a
-                  href={mlbPlayerStatsUrl(
-                    todayGame.opposingPitcher.name,
-                    todayGame.opposingPitcher.mlbPlayerId,
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block truncate font-mono text-xs font-bold text-chrome underline-offset-2 hover:text-sith hover:underline"
-                >
-                  {todayGame.opposingPitcher.name}
-                </a>
+                <div className="flex items-center gap-1.5">
+                  <Image
+                    src={mlbTeamLogoUrl(todayGame.opposingPitcher.teamId)}
+                    alt=""
+                    aria-hidden={true}
+                    width={16}
+                    height={16}
+                    className="shrink-0 opacity-90"
+                  />
+                  <a
+                    href={mlbPlayerStatsUrl(
+                      todayGame.opposingPitcher.name,
+                      todayGame.opposingPitcher.mlbPlayerId,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate font-mono text-xs font-bold text-chrome underline-offset-2 hover:text-sith hover:underline"
+                  >
+                    {todayGame.opposingPitcher.name}
+                  </a>
+                </div>
                 <span className="mt-0.5 block font-mono text-[10px] tabular-nums text-muted">
                   {todayGame.opposingPitcher.record} · {todayGame.opposingPitcher.era} ERA ·{" "}
                   {todayGame.opposingPitcher.whip} WHIP

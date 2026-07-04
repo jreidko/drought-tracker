@@ -43,6 +43,7 @@ type MlbStatsResponse = {
 type MlbPersonResponse = {
   people: Array<{
     active: boolean;
+    status?: { code: string };
     fullName?: string;
     birthDate?: string;
     currentTeam?: { id: number; name: string };
@@ -124,6 +125,7 @@ function playerStatsAtVenue(
 
 function buildOpposingPitcher(
   probablePitcher: ProbablePitcher | undefined,
+  teamId: number,
   pitcherStatsById: Map<number, PitcherSeasonStats>,
 ): OpposingPitcher | undefined {
   if (!probablePitcher) {
@@ -134,6 +136,7 @@ function buildOpposingPitcher(
 
   return {
     mlbPlayerId: probablePitcher.mlbPlayerId,
+    teamId,
     name: probablePitcher.name,
     record: stats?.record ?? "—",
     era: stats?.era ?? "—",
@@ -157,13 +160,14 @@ function buildTodayGameInfo(
   const probablePitcher = isHome
     ? todayGame.awayProbablePitcher
     : todayGame.homeProbablePitcher;
+  const opposingTeamId = isHome ? todayGame.awayTeamId : todayGame.homeTeamId;
 
   return {
     venueId: todayGame.venueId,
     venueName: todayGame.venueName,
     homeTeamId: todayGame.homeTeamId,
     isHome,
-    opposingPitcher: buildOpposingPitcher(probablePitcher, pitcherStatsById),
+    opposingPitcher: buildOpposingPitcher(probablePitcher, opposingTeamId, pitcherStatsById),
     hrParkFactor: venueHrStats?.hrParkFactor ?? 100,
     hrParkFactorYearRange: venueHrStats?.yearRange ?? "",
     playerHomeRunsAtVenue: venueStats.homeRuns,
@@ -225,7 +229,7 @@ async function buildPlayerStats(
     avgHr1Year: averageHomeRunsPerSeason(seasons, 1, season),
     avgHr3Year: averageHomeRunsPerSeason(seasons, 3, season),
     avgHr5Year: averageHomeRunsPerSeason(seasons, 5, season),
-    rosterStatus: person?.active ? "active" : "inactive",
+    rosterStatus: person?.status?.code === "A" ? "active" : "inactive",
     gameToday,
     todayGame:
       todayGame && teamId !== undefined
