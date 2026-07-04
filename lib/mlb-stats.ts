@@ -43,12 +43,15 @@ type MlbStatsResponse = {
 type MlbPersonResponse = {
   people: Array<{
     active: boolean;
-    status?: { code: string };
     fullName?: string;
     birthDate?: string;
     currentTeam?: { id: number; name: string };
     batSide?: { code: string };
   }>;
+};
+
+type MlbRosterResponse = {
+  roster: Array<{ person: { id: number } }>;
 };
 
 type GameLogEntry = {
@@ -175,6 +178,13 @@ function buildTodayGameInfo(
   };
 }
 
+async function fetchActiveRosterIds(teamId: number): Promise<Set<number>> {
+  const response = await fetchMlb<MlbRosterResponse>(
+    `/teams/${teamId}/roster?rosterType=26Man`,
+  ).catch(() => ({ roster: [] }));
+  return new Set(response.roster.map((entry) => entry.person.id));
+}
+
 async function buildPlayerStats(
   mlbPlayerId: number,
   name: string | undefined,
@@ -204,9 +214,12 @@ async function buildPlayerStats(
   const playerName = person?.fullName ?? name ?? "Unknown";
   const teamId = person?.currentTeam?.id;
   const metadata = getPlayerMetadata(mlbPlayerId);
-  const espnId =
-    metadata.espnId ??
-    (await lookupEspnId(playerName, person?.birthDate).catch(() => undefined));
+  const [espnId, activeRosterIds] = await Promise.all([
+    metadata.espnId !== undefined
+      ? Promise.resolve(metadata.espnId)
+      : lookupEspnId(playerName, person?.birthDate).catch(() => undefined),
+    teamId !== undefined ? fetchActiveRosterIds(teamId) : Promise.resolve(new Set<number>()),
+  ]);
   const todayGame =
     teamId !== undefined ? todayGamesByTeam.get(teamId) : undefined;
   const gameToday = todayGame !== undefined;
@@ -229,7 +242,9 @@ async function buildPlayerStats(
     avgHr1Year: averageHomeRunsPerSeason(seasons, 1, season),
     avgHr3Year: averageHomeRunsPerSeason(seasons, 3, season),
     avgHr5Year: averageHomeRunsPerSeason(seasons, 5, season),
-    rosterStatus: person?.status?.code === "A" ? "active" : "inactive",
+    rosterStatus: activeRosterIds.size > 0
+      ? (activeRosterIds.has(mlbPlayerId) ? "active" : "inactive")
+      : (person?.active ? "active" : "inactive"),
     gameToday,
     todayGame:
       todayGame && teamId !== undefined
