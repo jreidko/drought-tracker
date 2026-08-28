@@ -69,7 +69,7 @@ export default function InstallPrompt() {
         <p className="text-sm text-chrome">
           {isIOS
             ? "Install: tap Share, then Add to Home Screen."
-            : "Install Drought Tracker for quick access from your home screen."}
+            : "Install chalk/dog for quick access from your home screen."}
         </p>
         <div className="flex shrink-0 gap-2">
           {deferredPrompt ? (

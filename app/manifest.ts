@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Drought Tracker",
-    short_name: "Drought",
-    description: "2026 home run leaderboard with drought streak tracking",
+    name: "chalk/dog",
+    short_name: "chalk/dog",
+    description: "Player reports for MLB and NFL — droughts, touchdowns, yards, and more.",
     start_url: "/",
     scope: "/",
     display: "standalone",

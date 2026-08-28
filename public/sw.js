@@ -1,4 +1,4 @@
-const CACHE_VERSION = "drought-tracker-v2";
+const CACHE_VERSION = "chalk-dog-v1";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PRECACHE_URLS = ["/offline", "/icons/icon-192x192.png", "/icons/icon-512x512.png"];
 
@@ -14,7 +14,11 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key.startsWith("drought-tracker-") && key !== STATIC_CACHE)
+          .filter(
+            (key) =>
+              (key.startsWith("drought-tracker-") || key.startsWith("chalk-dog-")) &&
+              key !== STATIC_CACHE,
+          )
           .map((key) => caches.delete(key)),
       ),
     ),

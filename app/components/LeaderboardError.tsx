@@ -11,7 +11,7 @@ export default function LeaderboardError() {
           The MLB Stats API did not respond. Try again in a few minutes.
         </p>
         <Link
-          href="/"
+          href="/droughttracker"
           className="mt-4 inline-flex min-h-11 items-center rounded-sm border border-sith-dim/50 bg-surface-elevated px-4 text-sm font-bold uppercase tracking-wide text-sith transition-colors hover:bg-sith/10"
         >
           Retry

@@ -4,7 +4,7 @@ export default function OfflinePage() {
   return (
     <div className="vader-bg flex min-h-dvh flex-col items-center justify-center px-6 text-center">
       <p className="text-sm font-bold uppercase tracking-[0.2em] text-chrome">
-        Drought Tracker
+        chalk/dog
       </p>
       <h1 className="sith-text-glow mt-3 text-xl font-bold uppercase tracking-wide text-sith">
         You Are Offline

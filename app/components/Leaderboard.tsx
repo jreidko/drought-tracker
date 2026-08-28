@@ -16,13 +16,40 @@ import {
 } from "@/lib/player-links";
 import type { Player, TodayGameInfo } from "@/lib/player";
 import { describeHrParkFactor } from "@/lib/venue-hr-stats";
+import {
+  DROUGHT_TRACKER,
+  DROUGHT_TRACKER_LEGACY_STARRED_KEY,
+} from "@/lib/reports/catalog";
+import { collectActiveGames } from "@/lib/reports/games-today";
 import LeaderboardReference from "@/app/components/LeaderboardReference";
 import HomeRunLeadersTable from "@/app/components/HomeRunLeadersTable";
+import {
+  CompareSection,
+  NoPlayersMatch,
+  PlayerGrid,
+} from "@/app/components/report/ReportBoard";
+import {
+  FilterChip,
+  ReportToolbar,
+  SortRow,
+} from "@/app/components/report/ReportToolbar";
+import {
+  PlayerPanelGridCell,
+  PlayerStatusBadges,
+  PlayerTile,
+  PlayerTileFooter,
+  PlayerTileHeader,
+  TodayGameFrame,
+  type SourceLink,
+} from "@/app/components/report/PlayerTile";
+import {
+  useComparedPlayers,
+  useStarredPlayers,
+} from "@/app/components/report/selection";
 import Image from "next/image";
-import React, { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const GAMES_IN_SEASON = GAMES_IN_MLB_SEASON;
-
 
 type DroughtTier =
   | "ignited"
@@ -99,251 +126,111 @@ function getDroughtTierLabel(streak: number): string {
   }
 }
 
+function playerSourceLinks(player: Player): SourceLink[] {
+  const links: SourceLink[] = [
+    {
+      label: "Savant",
+      href: baseballSavantUrl(player.name, player.mlbPlayerId),
+    },
+  ];
 
-function PlayerLinks({ player }: { player: Player }) {
-  const linkClass =
-    "font-mono text-[10px] uppercase tracking-wide text-chrome transition-colors hover:text-sith hover:underline";
+  if (player.fanGraphsId !== undefined) {
+    links.push({
+      label: "FanGraphs",
+      href: fanGraphsPlayerUrl(player.fanGraphsId, player.name),
+    });
+  }
 
-  return (
-    <div className="flex flex-wrap items-center gap-x-2 gap-y-0 font-mono text-[10px] uppercase tracking-wide">
-      <a
-        href={baseballSavantUrl(player.name, player.mlbPlayerId)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-      >
-        Savant
-      </a>
-      {player.fanGraphsId !== undefined ? (
-        <a
-          href={fanGraphsPlayerUrl(player.fanGraphsId, player.name)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkClass}
-        >
-          FanGraphs
-        </a>
-      ) : null}
-      {player.baseballReferencePath !== undefined ? (
-        <a
-          href={baseballReferenceUrl(player.baseballReferencePath)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkClass}
-        >
-          B-Ref
-        </a>
-      ) : null}
-      {player.espnId !== undefined ? (
-        <a
-          href={espnPlayerUrl(player.espnId, player.name)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={linkClass}
-        >
-          ESPN
-        </a>
-      ) : null}
-    </div>
-  );
-}
+  if (player.baseballReferencePath !== undefined) {
+    links.push({
+      label: "B-Ref",
+      href: baseballReferenceUrl(player.baseballReferencePath),
+    });
+  }
 
-function PlayerPanelGridCell({
-  label,
-  value,
-  sub,
-  icon,
-}: {
-  label: string;
-  value?: string;
-  sub?: string;
-  icon?: React.ReactNode;
-}) {
-  return (
-    <div className="player-panel-grid-cell">
-      <span className="player-panel-kicker">{label}</span>
-      {value !== undefined ? (
-        <>
-          <span className="player-panel-grid-value">
-            {icon ? (
-              <span className="flex items-center gap-1">
-                {icon}
-                {value}
-              </span>
-            ) : value}
-          </span>
-          {sub ? <span className="player-panel-grid-sub">{sub}</span> : null}
-        </>
-      ) : null}
-    </div>
-  );
-}
+  if (player.espnId !== undefined) {
+    links.push({
+      label: "ESPN",
+      href: espnPlayerUrl(player.espnId, player.name),
+    });
+  }
 
-
-function StatusDot({ on, onClass }: { on: boolean; onClass: string }) {
-  return (
-    <span
-      className={`inline-block size-1.5 rounded-full ${on ? onClass : "bg-muted/30"}`}
-    />
-  );
-}
-
-function PlayerStatusBadges({ player }: { player: Player }) {
-  const injured = player.rosterStatus === "inactive";
-
-  return (
-    <div className="mt-1.5 flex items-center gap-2.5">
-      <span className="inline-flex items-center gap-1">
-        <StatusDot on={!injured} onClass="bg-cold-teal" />
-        <span
-          className={`font-mono text-[9px] uppercase tracking-wide ${
-            !injured ? "text-cold-teal" : "text-muted/50"
-          }`}
-        >
-          Active
-        </span>
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <StatusDot on={player.gameToday} onClass="bg-sith" />
-        <span
-          className={`font-mono text-[9px] uppercase tracking-wide ${
-            player.gameToday ? "text-chrome" : "text-muted/50"
-          }`}
-        >
-          Game
-        </span>
-      </span>
-      <span className="inline-flex items-center gap-1">
-        <StatusDot on={injured} onClass="bg-cold-yellow" />
-        <span
-          className={`font-mono text-[9px] uppercase tracking-wide ${
-            injured ? "text-cold-yellow" : "text-muted/50"
-          }`}
-        >
-          IL
-        </span>
-      </span>
-    </div>
-  );
+  return links;
 }
 
 function TodayGamePanel({ todayGame }: { todayGame: TodayGameInfo }) {
   const parkFactorLabel = describeHrParkFactor(todayGame.hrParkFactor);
 
   return (
-    <div className="border-t border-border bg-surface/40 px-2.5 py-2">
-      <div className="flex items-start gap-2">
-        <Image
-          src={mlbTeamLogoUrl(todayGame.homeTeamId)}
-          alt=""
-          aria-hidden={true}
-          width={24}
-          height={24}
-          className="mt-0.5 shrink-0 opacity-90"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <span className="font-mono text-[10px] uppercase tracking-wide text-chrome">
-              {todayGame.venueName}
-            </span>
-            <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-muted">
-              {todayGame.isHome ? "Home" : "Away"}
-            </span>
-          </div>
-          <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
-            <div>
-              <span className="player-panel-kicker">HR Factor</span>
-              <span className="block font-mono text-xs font-bold tabular-nums text-chrome">
-                {todayGame.hrParkFactor}
-              </span>
-              <span className="block font-mono text-[9px] text-muted">
-                {parkFactorLabel}
-                {todayGame.hrParkFactorYearRange
-                  ? ` · ${todayGame.hrParkFactorYearRange}`
-                  : null}
-              </span>
-            </div>
-            <div>
-              <span className="player-panel-kicker">At Park</span>
-              <span className="block font-mono text-xs font-bold tabular-nums text-sith">
-                {todayGame.playerHomeRunsAtVenue} HR
-              </span>
-              <span className="block font-mono text-[9px] text-muted">
-                {todayGame.playerGamesAtVenue} G this season
-              </span>
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <span className="player-panel-kicker">Vs Pitcher</span>
-            {todayGame.opposingPitcher ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <Image
-                    src={mlbTeamLogoUrl(todayGame.opposingPitcher.teamId)}
-                    alt=""
-                    aria-hidden={true}
-                    width={16}
-                    height={16}
-                    className="shrink-0 opacity-90"
-                  />
-                  <a
-                    href={mlbPlayerStatsUrl(
-                      todayGame.opposingPitcher.name,
-                      todayGame.opposingPitcher.mlbPlayerId,
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="truncate font-mono text-xs font-bold text-chrome underline-offset-2 hover:text-sith hover:underline"
-                  >
-                    {todayGame.opposingPitcher.name}
-                  </a>
-                </div>
-                <span className="mt-0.5 block font-mono text-[10px] tabular-nums text-muted">
-                  {todayGame.opposingPitcher.record} · {todayGame.opposingPitcher.era} ERA ·{" "}
-                  {todayGame.opposingPitcher.whip} WHIP
-                </span>
-                <span className="block font-mono text-[10px] tabular-nums text-muted">
-                  {todayGame.opposingPitcher.homeRuns} HR · {todayGame.opposingPitcher.strikeOuts}{" "}
-                  K · {todayGame.opposingPitcher.inningsPitched} IP
-                </span>
-              </>
-            ) : (
-              <span className="block font-mono text-xs font-bold text-muted">TBD</span>
-            )}
-          </div>
+    <TodayGameFrame
+      logoUrl={mlbTeamLogoUrl(todayGame.homeTeamId)}
+      venueName={todayGame.venueName}
+      isHome={todayGame.isHome}
+    >
+      <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1">
+        <div>
+          <span className="player-panel-kicker">HR Factor</span>
+          <span className="block font-mono text-xs font-bold tabular-nums text-chrome">
+            {todayGame.hrParkFactor}
+          </span>
+          <span className="block font-mono text-[9px] text-muted">
+            {parkFactorLabel}
+            {todayGame.hrParkFactorYearRange
+              ? ` · ${todayGame.hrParkFactorYearRange}`
+              : null}
+          </span>
+        </div>
+        <div>
+          <span className="player-panel-kicker">At Park</span>
+          <span className="block font-mono text-xs font-bold tabular-nums text-sith">
+            {todayGame.playerHomeRunsAtVenue} HR
+          </span>
+          <span className="block font-mono text-[9px] text-muted">
+            {todayGame.playerGamesAtVenue} G this season
+          </span>
         </div>
       </div>
-    </div>
+      <div className="mt-1.5">
+        <span className="player-panel-kicker">Vs Pitcher</span>
+        {todayGame.opposingPitcher ? (
+          <>
+            <div className="flex items-center gap-1.5">
+              <Image
+                src={mlbTeamLogoUrl(todayGame.opposingPitcher.teamId)}
+                alt=""
+                aria-hidden={true}
+                width={16}
+                height={16}
+                className="shrink-0 opacity-90"
+              />
+              <a
+                href={mlbPlayerStatsUrl(
+                  todayGame.opposingPitcher.name,
+                  todayGame.opposingPitcher.mlbPlayerId,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate font-mono text-xs font-bold text-chrome underline-offset-2 hover:text-sith hover:underline"
+              >
+                {todayGame.opposingPitcher.name}
+              </a>
+            </div>
+            <span className="mt-0.5 block font-mono text-[10px] tabular-nums text-muted">
+              {todayGame.opposingPitcher.record} · {todayGame.opposingPitcher.era}{" "}
+              ERA · {todayGame.opposingPitcher.whip} WHIP
+            </span>
+            <span className="block font-mono text-[10px] tabular-nums text-muted">
+              {todayGame.opposingPitcher.homeRuns} HR ·{" "}
+              {todayGame.opposingPitcher.strikeOuts} K ·{" "}
+              {todayGame.opposingPitcher.inningsPitched} IP
+            </span>
+          </>
+        ) : (
+          <span className="block font-mono text-xs font-bold text-muted">TBD</span>
+        )}
+      </div>
+    </TodayGameFrame>
   );
-}
-
-function useStarredPlayers() {
-  const [starredIds, setStarredIds] = useState<Set<number>>(() => {
-    if (typeof window === "undefined") return new Set();
-    try {
-      const raw = localStorage.getItem("starredPlayers");
-      return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  const toggleStar = useCallback((id: number) => {
-    setStarredIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      try {
-        localStorage.setItem("starredPlayers", JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
-  }, []);
-
-  return { starredIds, toggleStar };
 }
 
 function PlayerCard({
@@ -365,65 +252,15 @@ function PlayerCard({
   const droughtReversedClass = getDroughtReversedClass(player.droughtStreak);
 
   return (
-    <article
-      className={`player-panel overflow-hidden rounded-sm border ${getRowHighlightClass(player.droughtStreak)}`}
-    >
-      <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5">
-        {player.teamId !== null ? (
-          <>
-            <Image
-              src={mlbTeamLogoUrl(player.teamId)}
-              alt=""
-              aria-hidden={true}
-              width={20}
-              height={20}
-              className="shrink-0 opacity-90"
-            />
-            <span className="font-mono text-[10px] uppercase tracking-wide text-muted">
-              {player.teamName}
-            </span>
-          </>
-        ) : null}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
-          <button
-            onClick={onToggleCompare}
-            aria-label={isCompared ? "Remove from comparison" : "Add to comparison"}
-            className="shrink-0 transition-colors"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className={isCompared ? "text-cold-teal" : "text-muted hover:text-chrome"}
-            >
-              <rect x="3" y="3" width="7" height="18" rx="1" />
-              <rect x="14" y="3" width="7" height="18" rx="1" />
-            </svg>
-          </button>
-          <button
-            onClick={onToggleStar}
-            aria-label={isStarred ? "Unstar player" : "Star player"}
-            className="shrink-0 transition-colors"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill={isStarred ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth="2"
-              className={isStarred ? "text-yellow-400" : "text-muted hover:text-chrome"}
-            >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-          </button>
-        </div>
-      </div>
+    <PlayerTile highlightClass={getRowHighlightClass(player.droughtStreak)}>
+      <PlayerTileHeader
+        teamLogoUrl={player.teamId !== null ? mlbTeamLogoUrl(player.teamId) : null}
+        teamName={player.teamName}
+        isStarred={isStarred}
+        onToggleStar={onToggleStar}
+        isCompared={isCompared}
+        onToggleCompare={onToggleCompare}
+      />
       <div className="flex border-b border-border">
         <div className="flex flex-1 flex-col border-r border-border px-2.5 py-2">
           <div className="flex items-center justify-between">
@@ -431,9 +268,31 @@ function PlayerCard({
             {player.sluggingPct !== null && (
               <span className="flex items-center gap-1 font-mono text-[8px] font-semibold uppercase tracking-[0.12em] text-muted tabular-nums">
                 SLG {player.sluggingPct.toFixed(3).replace(/^0/, "")}
-                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" fill="none">
-                  <line x1="1" y1="9" x2="3.5" y2="6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  <line x1="3.5" y1="6.5" x2="9" y2="1" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  aria-hidden="true"
+                  fill="none"
+                >
+                  <line
+                    x1="1"
+                    y1="9"
+                    x2="3.5"
+                    y2="6.5"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1="3.5"
+                    y1="6.5"
+                    x2="9"
+                    y2="1"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </span>
             )}
@@ -451,14 +310,22 @@ function PlayerCard({
           </span>
           {player.gamesPlayed > 0 && (
             <span className="block font-mono text-[10px] tabular-nums text-muted">
-              {(player.homeRunsThisSeason / player.gamesPlayed).toFixed(3)} HR/G · {player.gamesPlayed} G
+              {(player.homeRunsThisSeason / player.gamesPlayed).toFixed(3)} HR/G
+              · {player.gamesPlayed} G
             </span>
           )}
-          <PlayerStatusBadges player={player} />
+          <PlayerStatusBadges
+            rosterStatus={player.rosterStatus}
+            gameToday={player.gameToday}
+          />
         </div>
         <div className="flex w-1/3 flex-col px-2.5 py-2">
-          <span className="player-panel-kicker">{getDroughtTierLabel(player.droughtStreak)}</span>
-          <div className={`player-panel-drought-reversed flex-1 ${droughtReversedClass}`}>
+          <span className="player-panel-kicker">
+            {getDroughtTierLabel(player.droughtStreak)}
+          </span>
+          <div
+            className={`player-panel-drought-reversed flex-1 ${droughtReversedClass}`}
+          >
             {player.droughtStreak}
           </div>
         </div>
@@ -484,10 +351,8 @@ function PlayerCard({
 
       {player.todayGame ? <TodayGamePanel todayGame={player.todayGame} /> : null}
 
-      <footer className="border-t border-border bg-surface/60 px-2 py-1.5">
-        <PlayerLinks player={player} />
-      </footer>
-    </article>
+      <PlayerTileFooter links={playerSourceLinks(player)} />
+    </PlayerTile>
   );
 }
 
@@ -508,65 +373,51 @@ export default function Leaderboard({
   const [filterGameToday, setFilterGameToday] = useState(false);
   const [filterDrought, setFilterDrought] = useState(false);
   const [filterStarred, setFilterStarred] = useState(false);
-  const [selectedGameHomeTeamId, setSelectedGameHomeTeamId] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<"drought" | "slugging" | "projHR">("drought");
-  const { starredIds, toggleStar } = useStarredPlayers();
-  const [comparedIds, setComparedIds] = useState<Set<number>>(new Set());
+  const [selectedGameHomeTeamId, setSelectedGameHomeTeamId] = useState<
+    number | null
+  >(null);
+  const [sortBy, setSortBy] = useState<"drought" | "slugging" | "projHR">(
+    "drought",
+  );
+  const { starredIds, toggleStar } = useStarredPlayers(
+    DROUGHT_TRACKER.starredStorageKey,
+    DROUGHT_TRACKER_LEGACY_STARRED_KEY,
+  );
+  const { comparedIds, toggleCompare, clearComparison } = useComparedPlayers();
 
-  const toggleCompare = useCallback((id: number) => {
-    setComparedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const clearComparison = useCallback(() => setComparedIds(new Set()), []);
-
-  const activeGames = useMemo(() => {
-    const gameMap = new Map<number, { homeTeamName: string | null; awayTeamName: string | null; venueName: string }>();
-    for (const player of players) {
-      if (!player.todayGame) continue;
-      const { homeTeamId, venueName } = player.todayGame;
-      if (!gameMap.has(homeTeamId)) {
-        gameMap.set(homeTeamId, { homeTeamName: null, awayTeamName: null, venueName });
-      }
-      const entry = gameMap.get(homeTeamId)!;
-      if (player.teamId === homeTeamId) {
-        entry.homeTeamName = player.teamName;
-      } else {
-        entry.awayTeamName = player.teamName;
-      }
-    }
-    return Array.from(gameMap.entries())
-      .map(([homeTeamId, info]) => ({
-        homeTeamId,
-        label:
-          info.awayTeamName && info.homeTeamName
-            ? `${info.awayTeamName} @ ${info.homeTeamName}`
-            : info.venueName,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [players]);
+  const activeGames = useMemo(() => collectActiveGames(players), [players]);
 
   const displayedPlayers = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return players
       .filter((player) => {
-        if (normalizedQuery && !player.name.toLowerCase().includes(normalizedQuery)) return false;
-        if (filterProjHR30 && (player.gamesPlayed === 0 || player.homeRunsThisSeason / player.gamesPlayed < 0.185)) return false;
-        if (filterProjHR && (player.gamesPlayed === 0 || player.homeRunsThisSeason / player.gamesPlayed < 0.247)) return false;
-        if (filterAvg3Y20 && (player.avgHr3Year === null || player.avgHr3Year <= 20)) return false;
-        if (filterAvg3Y30 && (player.avgHr3Year === null || player.avgHr3Year <= 30)) return false;
+        if (normalizedQuery && !player.name.toLowerCase().includes(normalizedQuery))
+          return false;
+        if (
+          filterProjHR30 &&
+          (player.gamesPlayed === 0 ||
+            player.homeRunsThisSeason / player.gamesPlayed < 0.185)
+        )
+          return false;
+        if (
+          filterProjHR &&
+          (player.gamesPlayed === 0 ||
+            player.homeRunsThisSeason / player.gamesPlayed < 0.247)
+        )
+          return false;
+        if (filterAvg3Y20 && (player.avgHr3Year === null || player.avgHr3Year <= 20))
+          return false;
+        if (filterAvg3Y30 && (player.avgHr3Year === null || player.avgHr3Year <= 30))
+          return false;
         if (filterGameToday && !player.gameToday) return false;
         if (filterDrought && player.droughtStreak < 3) return false;
         if (filterStarred && !starredIds.has(player.mlbPlayerId)) return false;
-        if (selectedGameHomeTeamId !== null && player.todayGame?.homeTeamId !== selectedGameHomeTeamId) return false;
+        if (
+          selectedGameHomeTeamId !== null &&
+          player.todayGame?.homeTeamId !== selectedGameHomeTeamId
+        )
+          return false;
         return true;
       })
       .sort((a, b) => {
@@ -583,7 +434,24 @@ export default function Leaderboard({
         }
         return b.droughtStreak - a.droughtStreak;
       });
-  }, [players, searchQuery, filterProjHR30, filterProjHR, filterAvg3Y20, filterAvg3Y30, filterGameToday, filterDrought, filterStarred, selectedGameHomeTeamId, starredIds, sortBy]);
+  }, [
+    players,
+    searchQuery,
+    filterProjHR30,
+    filterProjHR,
+    filterAvg3Y20,
+    filterAvg3Y30,
+    filterGameToday,
+    filterDrought,
+    filterStarred,
+    selectedGameHomeTeamId,
+    starredIds,
+    sortBy,
+  ]);
+
+  const comparedPlayers = players.filter((player) =>
+    comparedIds.has(player.mlbPlayerId),
+  );
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -604,199 +472,108 @@ export default function Leaderboard({
         </p>
       </section>
 
-      <section aria-label="Search and filter controls" className="mb-4 space-y-2 sm:mb-6">
-        <label className="block">
-          <span className="sr-only">Search players by name</span>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search players…"
-            className="w-full rounded-sm border border-border bg-surface-elevated px-4 py-3 text-base text-foreground placeholder:text-muted transition-colors focus:border-sith/60"
-          />
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setFilterProjHR30((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterProjHR30
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            30+ Proj HR
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterProjHR((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterProjHR
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            40+ Proj HR
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterAvg3Y20((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterAvg3Y20
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            3Y Avg {'>'} 20
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterAvg3Y30((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterAvg3Y30
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            3Y Avg {'>'} 30
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterGameToday((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterGameToday
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            Game Today
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterDrought((v) => !v)}
-            className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterDrought
-                ? "border-sith bg-sith/15 text-sith"
-                : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-            }`}
-          >
-            3+ Game Drought
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterStarred((v) => !v)}
-            className={`flex items-center gap-1.5 rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-              filterStarred
-                ? "border-yellow-400/60 bg-yellow-400/10 text-yellow-400"
-                : "border-border bg-surface-elevated text-muted hover:border-yellow-400/40 hover:text-chrome"
-            }`}
-          >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill={filterStarred ? "currentColor" : "none"}
-              stroke="currentColor"
-              strokeWidth="2"
+      <ReportToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        filters={
+          <>
+            <FilterChip
+              active={filterProjHR30}
+              onClick={() => setFilterProjHR30((value) => !value)}
             >
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            Starred
-          </button>
-        </div>
-        {activeGames.length > 0 && (
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="game-filter"
-              className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted"
+              30+ Proj HR
+            </FilterChip>
+            <FilterChip
+              active={filterProjHR}
+              onClick={() => setFilterProjHR((value) => !value)}
             >
-              Game:
-            </label>
-            <select
-              id="game-filter"
-              value={selectedGameHomeTeamId ?? ""}
-              onChange={(e) =>
-                setSelectedGameHomeTeamId(e.target.value === "" ? null : Number(e.target.value))
-              }
-              className="rounded-sm border border-border bg-surface-elevated px-2 py-1.5 font-mono text-[11px] uppercase tracking-wide text-chrome transition-colors focus:border-sith/60 focus:outline-none"
+              40+ Proj HR
+            </FilterChip>
+            <FilterChip
+              active={filterAvg3Y20}
+              onClick={() => setFilterAvg3Y20((value) => !value)}
             >
-              <option value="">All Games</option>
-              {activeGames.map((game) => (
-                <option key={game.homeTeamId} value={game.homeTeamId}>
-                  {game.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[10px] uppercase tracking-wide text-muted">Sort:</span>
-          {(
-            [
-              { value: "drought", label: "Drought" },
-              { value: "slugging", label: "SLG %" },
-              { value: "projHR", label: "Proj HR" },
-            ] as const
-          ).map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setSortBy(value)}
-              className={`rounded-sm border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide transition-colors ${
-                sortBy === value
-                  ? "border-sith bg-sith/15 text-sith"
-                  : "border-border bg-surface-elevated text-muted hover:border-sith/40 hover:text-chrome"
-              }`}
+              3Y Avg {">"} 20
+            </FilterChip>
+            <FilterChip
+              active={filterAvg3Y30}
+              onClick={() => setFilterAvg3Y30((value) => !value)}
             >
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {comparedIds.size > 0 && (() => {
-        const comparedPlayers = players.filter((p) => comparedIds.has(p.mlbPlayerId));
-        return (
-          <section aria-label="Player comparison" className="mb-6">
-            <div className="mb-2 flex items-center gap-3">
-              <h2 className="font-mono text-[11px] uppercase tracking-wide text-chrome">
-                Comparing {comparedIds.size} player{comparedIds.size !== 1 ? "s" : ""}
-              </h2>
-              <button
-                type="button"
-                onClick={clearComparison}
-                className="rounded-sm border border-border bg-surface-elevated px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide text-muted transition-colors hover:border-sith/40 hover:text-chrome"
+              3Y Avg {">"} 30
+            </FilterChip>
+            <FilterChip
+              active={filterGameToday}
+              onClick={() => setFilterGameToday((value) => !value)}
+            >
+              Game Today
+            </FilterChip>
+            <FilterChip
+              active={filterDrought}
+              onClick={() => setFilterDrought((value) => !value)}
+            >
+              3+ Game Drought
+            </FilterChip>
+            <FilterChip
+              active={filterStarred}
+              onClick={() => setFilterStarred((value) => !value)}
+              tone="star"
+            >
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill={filterStarred ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
               >
-                Clear
-              </button>
-            </div>
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {comparedPlayers.map((player) => (
-                <li key={player.mlbPlayerId}>
-                  <PlayerCard
-                    player={player}
-                    isStarred={starredIds.has(player.mlbPlayerId)}
-                    onToggleStar={() => toggleStar(player.mlbPlayerId)}
-                    isCompared={true}
-                    onToggleCompare={() => toggleCompare(player.mlbPlayerId)}
-                  />
-                </li>
-              ))}
-            </ul>
-            <div className="mt-4 border-t border-border/50" />
-          </section>
-        );
-      })()}
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+              </svg>
+              Starred
+            </FilterChip>
+          </>
+        }
+        games={activeGames}
+        selectedGameHomeTeamId={selectedGameHomeTeamId}
+        onSelectGame={setSelectedGameHomeTeamId}
+        sort={
+          <SortRow>
+            {(
+              [
+                { value: "drought", label: "Drought" },
+                { value: "slugging", label: "SLG %" },
+                { value: "projHR", label: "Proj HR" },
+              ] as const
+            ).map(({ value, label }) => (
+              <FilterChip
+                key={value}
+                active={sortBy === value}
+                onClick={() => setSortBy(value)}
+              >
+                {label}
+              </FilterChip>
+            ))}
+          </SortRow>
+        }
+      />
+
+      <CompareSection count={comparedIds.size} onClear={clearComparison}>
+        {comparedPlayers.map((player) => (
+          <li key={player.mlbPlayerId}>
+            <PlayerCard
+              player={player}
+              isStarred={starredIds.has(player.mlbPlayerId)}
+              onToggleStar={() => toggleStar(player.mlbPlayerId)}
+              isCompared={true}
+              onToggleCompare={() => toggleCompare(player.mlbPlayerId)}
+            />
+          </li>
+        ))}
+      </CompareSection>
 
       {displayedPlayers.length === 0 ? (
-        <p className="rounded-sm border border-dashed border-border px-4 py-10 text-center text-sm text-muted">
-          No players match your search.
-        </p>
+        <NoPlayersMatch />
       ) : (
-        <ul
-          className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          aria-label="Player leaderboard"
-        >
+        <PlayerGrid label="Player leaderboard">
           {displayedPlayers.map((player) => (
             <li key={player.mlbPlayerId}>
               <PlayerCard
@@ -808,7 +585,7 @@ export default function Leaderboard({
               />
             </li>
           ))}
-        </ul>
+        </PlayerGrid>
       )}
 
       <aside className="mt-4 rounded-sm border border-border bg-surface/80 px-4 py-3 sm:mt-6">
@@ -832,7 +609,9 @@ export default function Leaderboard({
         <div className="mt-2 border-t border-border/50 pt-2 space-y-1 font-mono text-[11px] text-muted">
           <div>
             <span className="uppercase tracking-wide text-chrome">HR/G</span>
-            {" — home runs per game this season (used to project full-season total at 162 G pace)"}
+            {
+              " — home runs per game this season (used to project full-season total at 162 G pace)"
+            }
           </div>
           <div>
             <span className="uppercase tracking-wide text-chrome">SLG</span>

@@ -15,13 +15,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Drought Tracker",
-  description: "2026 home run leaderboard — embrace the power of the plate",
-  applicationName: "Drought Tracker",
+  title: {
+    default: "chalk/dog",
+    template: "%s · chalk/dog",
+  },
+  description:
+    "Player reports for MLB and NFL — droughts, touchdowns, yards, and more.",
+  applicationName: "chalk/dog",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Drought Tracker",
+    title: "chalk/dog",
   },
   icons: {
     icon: [
