@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AppChrome from "@/app/components/AppChrome";
 import LeaderboardLoader from "@/app/components/LeaderboardLoader";
 import LeaderboardSkeleton from "@/app/components/LeaderboardSkeleton";
+import { getCurrentMlbSeason } from "@/lib/mlb-stats";
 import { DROUGHT_TRACKER, SPORT_LABEL } from "@/lib/reports/catalog";
 import { Suspense } from "react";
 
@@ -73,9 +74,10 @@ export default function DroughtTrackerPage() {
   return (
     <AppChrome
       title={DROUGHT_TRACKER.title}
-      subtitle={`2026 ${DROUGHT_TRACKER.subtitle}`}
+      subtitle={`${getCurrentMlbSeason()} ${DROUGHT_TRACKER.subtitle}`}
       badge={SPORT_LABEL[DROUGHT_TRACKER.sport]}
       homeLink
+      currentHref={DROUGHT_TRACKER.href}
       footer={<DroughtTrackerFooter />}
     >
       <Suspense fallback={<LeaderboardSkeleton />}>

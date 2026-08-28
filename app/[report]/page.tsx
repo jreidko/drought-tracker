@@ -92,6 +92,7 @@ export default async function NflReportPage({
       subtitle={report.subtitle}
       badge={SPORT_LABEL[report.sport]}
       homeLink
+      currentHref={report.href}
       footer={<NflFooter espnStatsUrl={spec.espnStatsUrl} />}
     >
       <Suspense fallback={<LeaderboardSkeleton />}>

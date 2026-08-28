@@ -51,6 +51,7 @@ function ReportCard({ report }: { report: ReportDef }) {
 
 export default function ReportGallery() {
   const liveCount = REPORTS.filter((report) => report.status === "live").length;
+  const comingSoonCount = REPORTS.length - liveCount;
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
@@ -62,7 +63,9 @@ export default function ReportGallery() {
           Same board — search, game today, stars, compare — different player stats.
         </p>
         <p className="mt-1 text-xs text-muted">
-          {liveCount} live · {REPORTS.length - liveCount} coming soon
+          {comingSoonCount > 0
+            ? `${liveCount} live · ${comingSoonCount} coming soon`
+            : `${liveCount} reports`}
         </p>
       </section>
 

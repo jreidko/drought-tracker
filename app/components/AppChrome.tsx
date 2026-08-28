@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import InstallPrompt from "./InstallPrompt";
+import ReportSwitcher from "./report/ReportSwitcher";
 
 export default function AppChrome({
   title,
   subtitle,
   badge,
   homeLink = false,
+  currentHref,
   footer,
   children,
 }: {
@@ -14,6 +16,7 @@ export default function AppChrome({
   subtitle: string;
   badge?: string;
   homeLink?: boolean;
+  currentHref?: string;
   footer?: ReactNode;
   children: ReactNode;
 }) {
@@ -40,11 +43,14 @@ export default function AppChrome({
             </p>
             <p className="truncate text-xs text-muted sm:text-sm">{subtitle}</p>
           </div>
-          {badge ? (
-            <span className="shrink-0 rounded-sm border border-sith-dim/60 bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-sith sm:text-xs">
-              {badge}
-            </span>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {currentHref ? <ReportSwitcher currentHref={currentHref} /> : null}
+            {badge ? (
+              <span className="shrink-0 rounded-sm border border-sith-dim/60 bg-surface px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-sith sm:text-xs">
+                {badge}
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="imperial-rule" aria-hidden />
       </header>
