@@ -105,9 +105,11 @@ function StatusDot({ on, onClass }: { on: boolean; onClass: string }) {
 export function PlayerStatusBadges({
   rosterStatus,
   gameToday,
+  inactiveLabel = "IL",
 }: {
   rosterStatus: "active" | "inactive";
   gameToday: boolean;
+  inactiveLabel?: string;
 }) {
   const injured = rosterStatus === "inactive";
 
@@ -140,7 +142,7 @@ export function PlayerStatusBadges({
             injured ? "text-cold-yellow" : "text-muted/50"
           }`}
         >
-          IL
+          {inactiveLabel}
         </span>
       </span>
     </div>

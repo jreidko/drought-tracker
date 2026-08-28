@@ -27,6 +27,18 @@ export function espnPlayerUrl(espnId: number, name: string): string {
   return `https://www.espn.com/mlb/player/_/id/${espnId}/${slugifyPlayerName(name)}`;
 }
 
+export function espnNflPlayerUrl(espnId: number, slug: string): string {
+  return `https://www.espn.com/nfl/player/_/id/${espnId}/${slug}`;
+}
+
+export function espnNflPlayerStatsUrl(espnId: number, slug: string): string {
+  return `https://www.espn.com/nfl/player/stats/_/id/${espnId}/${slug}`;
+}
+
+export function espnNflTeamLogoUrl(abbreviation: string): string {
+  return `https://a.espncdn.com/i/teamlogos/nfl/500/${abbreviation.toLowerCase()}.png`;
+}
+
 export function mlbTeamLogoUrl(teamId: number): string {
   return `https://www.mlbstatic.com/team-logos/${teamId}.svg`;
 }

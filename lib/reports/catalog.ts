@@ -40,19 +40,21 @@ export const DROUGHT_TRACKER: ReportDef = {
 
 export const DROUGHT_TRACKER_LEGACY_STARRED_KEY = LEGACY_STARRED_KEY;
 
+export const PASSING_TDS: ReportDef = {
+  slug: "passing-tds",
+  href: "/passing-tds",
+  sport: "nfl",
+  title: "Passing Touchdowns",
+  subtitle: "QB passing TDs",
+  description:
+    "Quarterback passing touchdown leaders — pace, games today, and opponent.",
+  status: "live",
+  starredStorageKey: starredKey("nfl", "passing-tds"),
+};
+
 export const REPORTS: ReportDef[] = [
   DROUGHT_TRACKER,
-  {
-    slug: "passing-tds",
-    href: "/passing-tds",
-    sport: "nfl",
-    title: "Passing Touchdowns",
-    subtitle: "QB passing TDs",
-    description:
-      "Quarterback passing touchdown leaders — pace, games today, and opponent.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "passing-tds"),
-  },
+  PASSING_TDS,
   {
     slug: "passing-yards",
     href: "/passing-yards",

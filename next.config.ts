@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "www.mlbstatic.com" },
+      { protocol: "https", hostname: "a.espncdn.com" },
     ],
   },
   async headers() {
