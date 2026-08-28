@@ -26,6 +26,24 @@ function starredKey(sport: Sport, slug: string) {
   return `starred:${sport}:${slug}`;
 }
 
+function nflReport(
+  slug: string,
+  title: string,
+  subtitle: string,
+  description: string,
+): ReportDef {
+  return {
+    slug,
+    href: `/${slug}`,
+    sport: "nfl",
+    title,
+    subtitle,
+    description,
+    status: "live",
+    starredStorageKey: starredKey("nfl", slug),
+  };
+}
+
 export const DROUGHT_TRACKER: ReportDef = {
   slug: "droughttracker",
   href: "/droughttracker",
@@ -40,82 +58,52 @@ export const DROUGHT_TRACKER: ReportDef = {
 
 export const DROUGHT_TRACKER_LEGACY_STARRED_KEY = LEGACY_STARRED_KEY;
 
-export const PASSING_TDS: ReportDef = {
-  slug: "passing-tds",
-  href: "/passing-tds",
-  sport: "nfl",
-  title: "Passing Touchdowns",
-  subtitle: "QB passing TDs",
-  description:
-    "Quarterback passing touchdown leaders — pace, games today, and opponent.",
-  status: "live",
-  starredStorageKey: starredKey("nfl", "passing-tds"),
-};
+export const PASSING_TDS = nflReport(
+  "passing-tds",
+  "Passing Touchdowns",
+  "QB passing TDs",
+  "Quarterback passing touchdown leaders — pace, games today, and opponent.",
+);
 
 export const REPORTS: ReportDef[] = [
   DROUGHT_TRACKER,
   PASSING_TDS,
-  {
-    slug: "passing-yards",
-    href: "/passing-yards",
-    sport: "nfl",
-    title: "Passing Yards",
-    subtitle: "QB passing yards",
-    description: "Quarterback passing yardage leaders and per-game pace.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "passing-yards"),
-  },
-  {
-    slug: "rushing-tds",
-    href: "/rushing-tds",
-    sport: "nfl",
-    title: "Rushing Touchdowns",
-    subtitle: "QB & RB rushing TDs",
-    description: "Rushing touchdowns for quarterbacks and running backs.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "rushing-tds"),
-  },
-  {
-    slug: "rushing-yards",
-    href: "/rushing-yards",
-    sport: "nfl",
-    title: "Rushing Yards",
-    subtitle: "QB & RB rushing yards",
-    description: "Rushing yardage leaders among quarterbacks and running backs.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "rushing-yards"),
-  },
-  {
-    slug: "td-scorers",
-    href: "/td-scorers",
-    sport: "nfl",
-    title: "Touchdown Scorers",
-    subtitle: "Any player TDs",
-    description:
-      "Anyone who finds the end zone — rush, receiving, return, or defensive.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "td-scorers"),
-  },
-  {
-    slug: "receptions",
-    href: "/receptions",
-    sport: "nfl",
-    title: "Receptions",
-    subtitle: "WR, TE & RB",
-    description: "Catch leaders among receivers and running backs.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "receptions"),
-  },
-  {
-    slug: "interceptions",
-    href: "/interceptions",
-    sport: "nfl",
-    title: "Interceptions",
-    subtitle: "Defensive INTs",
-    description: "Defensive interception leaders.",
-    status: "coming-soon",
-    starredStorageKey: starredKey("nfl", "interceptions"),
-  },
+  nflReport(
+    "passing-yards",
+    "Passing Yards",
+    "QB passing yards",
+    "Quarterback passing yardage leaders and per-game pace.",
+  ),
+  nflReport(
+    "rushing-tds",
+    "Rushing Touchdowns",
+    "QB & RB rushing TDs",
+    "Rushing touchdowns for quarterbacks and running backs.",
+  ),
+  nflReport(
+    "rushing-yards",
+    "Rushing Yards",
+    "QB & RB rushing yards",
+    "Rushing yardage leaders among quarterbacks and running backs.",
+  ),
+  nflReport(
+    "td-scorers",
+    "Touchdown Scorers",
+    "Any player TDs",
+    "Anyone who finds the end zone — rush, receiving, or return.",
+  ),
+  nflReport(
+    "receptions",
+    "Receptions",
+    "WR, TE & RB",
+    "Catch leaders among receivers and running backs.",
+  ),
+  nflReport(
+    "interceptions",
+    "Interceptions",
+    "Defensive INTs",
+    "Defensive interception leaders.",
+  ),
 ];
 
 export function reportsForSport(sport: Sport): ReportDef[] {

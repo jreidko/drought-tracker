@@ -9,7 +9,7 @@ export type NflTodayGame = {
   statusText: string;
 };
 
-export type PassingTdPlayer = {
+export type NflPlayer = {
   id: number;
   name: string;
   slug: string;
@@ -21,19 +21,11 @@ export type PassingTdPlayer = {
   gameToday: boolean;
   todayGame?: NflTodayGame;
   gamesPlayed: number;
-  passingTouchdowns: number;
-  passingYards: number;
-  passingAttempts: number;
-  completions: number;
-  completionPct: number | null;
-  interceptions: number;
-  passerRating: number | null;
-  passingYardsPerGame: number | null;
-  projectedSeasonTds: number;
+  stats: Record<string, number | null>;
 };
 
-export type PassingTdLeaderboardData = {
-  players: PassingTdPlayer[];
+export type NflLeaderboardData = {
+  players: NflPlayer[];
   season: number;
   seasonName: string;
   liveSeasonType: number;
